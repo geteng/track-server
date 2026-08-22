@@ -25,12 +25,22 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
-/* Header */
-.header { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-.header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.header h1 .icon { font-size: 22px; }
-.header-actions { display: flex; gap: 8px; align-items: center; }
+/* 统一顶部导航（与销售工作台一致） */
+.top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.top-nav-inner { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; height: 56px; gap: 24px; }
+.top-nav .logo { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
+.top-nav .logo .icon { font-size: 20px; }
+.nav-links { display: flex; gap: 4px; flex: 1; }
+.nav-links a { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+.nav-links a:hover { background: var(--bg); color: var(--text); }
+.nav-links a.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+.nav-right { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-muted); }
 .auto-refresh-label { font-size: 12px; color: var(--text-muted); }
+@media (max-width: 768px) { .nav-links { display: none; } .top-nav-inner { padding: 0 12px; } }
+
+/* 页面标题 */
+.page-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
 /* Container */
 .container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
@@ -161,31 +171,26 @@ tr:hover td { background: var(--primary-light); }
 </head>
 <body>
 
-<style>
-/* 统一顶部导航（销售工作台互通） */
-.nav-links { display: flex; gap: 4px; margin-right: 16px; }
-.nav-links a { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
-.nav-links a:hover { background: var(--bg); color: var(--text); }
-.nav-links a.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
-@media (max-width: 768px) { .nav-links { display: none; } }
-</style>
-
-<div class="header">
-  <h1><span class="icon">📊</span> airU+原型demo用户行为日志后台</h1>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <nav class="nav-links">
+<!-- 统一顶部导航（与销售工作台一致） -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="logo" href="/sales"><span class="icon">👗</span> airU 销售工作台</a>
+    <div class="nav-links">
       <a href="/sales">今日概览</a>
       <a href="/sales/users">用户列表</a>
       <a href="/userBehavior" class="active">行为日志</a>
-    </nav>
-    <div class="header-actions">
+    </div>
+    <div class="nav-right">
       <label class="auto-refresh-label"><input type="checkbox" id="autoRefresh"> 自动刷新(30s)</label>
       <button class="btn btn-secondary" onclick="loadData()">🔄 刷新</button>
     </div>
   </div>
-</div>
+</nav>
 
 <div class="container">
+  <div class="page-title">📊 airU+ 用户行为日志后台</div>
+  <div class="page-sub">实时查看小程序上报的原始埋点数据，支持时间过滤、事件检索与 CSV 导出。</div>
+
   <!-- Filter Bar -->
   <div class="filter-bar">
     <div class="filter-row">
