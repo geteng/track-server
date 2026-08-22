@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>销售工作台 · 今日概览 | airU</title>
+<style>
+:root {
+  --primary: #4F46E5;
+  --primary-dark: #4338CA;
+  --primary-light: #EEF2FF;
+  --bg: #F3F4F6;
+  --card-bg: #FFFFFF;
+  --text: #111827;
+  --text-muted: #6B7280;
+  --border: #E5E7EB;
+  --border-dark: #D1D5DB;
+  --green: #10B981;
+  --green-light: #D1FAE5;
+  --amber: #F59E0B;
+  --amber-light: #FEF3C7;
+  --red: #EF4444;
+  --red-light: #FEE2E2;
+  --blue: #3B82F6;
+  --blue-light: #DBEAFE;
+  --purple: #8B5CF6;
+  --purple-light: #EDE9FE;
+  --pink: #EC4899;
+  --pink-light: #FCE7F3;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+/* ===== 统一顶部导航 ===== */
+.top-nav { background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.top-nav-inner { max-width: 1400px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; height: 56px; gap: 24px; }
+.top-nav .logo { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
+.top-nav .logo .icon { font-size: 20px; }
+.nav-links { display: flex; gap: 4px; flex: 1; }
+.nav-links a { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+.nav-links a:hover { background: var(--bg); color: var(--text); }
+.nav-links a.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+.nav-right { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-muted); }
+
+/* ===== 布局 ===== */
+.container { max-width: 1400px; margin: 0 auto; padding: 20px 24px 40px; }
+.page-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+/* ===== 6 数字卡片 ===== */
+.stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.stat-card .icon-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; }
+.stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.stat-card .value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.stat-card .value small { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.stat-card .detail { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.stat-card .detail .up { color: var(--green); font-weight: 600; }
+.bg-blue { background: var(--blue-light); }
+.bg-amber { background: var(--amber-light); }
+.bg-green { background: var(--green-light); }
+.bg-purple { background: var(--purple-light); }
+.bg-pink { background: var(--pink-light); }
+.bg-red { background: var(--red-light); }
+
+/* ===== 今日行动摘要 ===== */
+.summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+.summary-card .card-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.summary-item { display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--bg); margin-bottom: 10px; align-items: flex-start; }
+.summary-item:last-child { margin-bottom: 0; }
+.summary-item .num { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.summary-item .text { font-size: 13px; line-height: 1.6; color: var(--text); }
+.summary-item .text b { color: var(--primary); }
+
+/* ===== 今日重点用户卡片 ===== */
+.section { margin-bottom: 20px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-head h2 { font-size: 15px; font-weight: 700; }
+.section-head .more { font-size: 13px; color: var(--primary); cursor: pointer; text-decoration: none; font-weight: 500; }
+.user-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.user-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; cursor: pointer; transition: all 0.2s; position: relative; }
+.user-card:hover { border-color: var(--primary); box-shadow: 0 6px 16px rgba(79,70,229,0.12); transform: translateY(-2px); }
+.user-card .u-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.user-card .u-name { font-size: 14px; font-weight: 600; }
+.user-card .u-score { font-size: 12px; color: var(--text-muted); }
+.score-badge { position: absolute; top: 16px; right: 16px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+.score-hot { background: var(--red-light); color: var(--red); }
+.score-warm { background: var(--amber-light); color: #92400E; }
+.user-card .signals { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.signal-tag { padding: 3px 8px; border-radius: 6px; font-size: 11px; background: var(--bg); color: var(--text-muted); }
+.signal-tag.key { background: var(--primary-light); color: var(--primary); }
+.user-card .u-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.u-metrics .m { text-align: center; }
+.u-metrics .m .v { font-size: 15px; font-weight: 700; }
+.u-metrics .m .k { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.user-card .u-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn { flex: 1; padding: 8px 0; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { background: var(--card-bg); border: 1px solid var(--border-dark); color: var(--text); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn-sm { flex: none; padding: 6px 12px; }
+
+/* ===== 连带机会预览 ===== */
+.crosssell-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.crosssell-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+.crosssell-card:hover { border-color: var(--green); box-shadow: 0 4px 12px rgba(16,185,129,0.12); }
+.crosssell-card .cs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.crosssell-card .cs-name { font-size: 13px; font-weight: 600; }
+.crosssell-card .cs-amount { font-size: 15px; font-weight: 700; color: var(--green); }
+.crosssell-card .cs-reason { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+/* ===== 空态/加载 ===== */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 13px; }
+.loading { text-align: center; padding: 40px; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 12px; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 1200px) {
+  .stats-row { grid-template-columns: repeat(3, 1fr); }
+  .user-grid, .crosssell-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .user-grid, .crosssell-grid { grid-template-columns: 1fr; }
+  .top-nav-inner { padding: 0 12px; }
+  .nav-links a { padding: 8px 8px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 统一顶部导航 -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="logo" href="/sales"><span class="icon">👗</span> airU 销售工作台</a>
+    <div class="nav-links">
+      <a href="/sales" class="active">今日概览</a>
+      <a href="/sales/users">用户列表</a>
+      <a href="/userBehavior">行为日志</a>
+    </div>
+    <div class="nav-right"><span id="nowText"></span></div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-title">店长今日概览</div>
+  <div class="page-sub">把海量用户行为压缩成三件事：谁最值得今天跟进、为什么值得、下一步该做什么。</div>
+
+  <!-- 6 个数字 -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
+    <div class="stat-card"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
+    <div class="stat-card"><div class="icon-badge bg-green">🛍️</div><div class="label">连带销售机会金额</div><div class="value" id="statCrosssell">—</div><div class="detail" id="statCrosssellDetail"></div></div>
+    <div class="stat-card"><div class="icon-badge bg-purple">💬</div><div class="label">今日已联系用户</div><div class="value" id="statContacted">—</div><div class="detail">来自跟进任务完成</div></div>
+    <div class="stat-card"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
+    <div class="stat-card"><div class="icon-badge bg-red">💰</div><div class="label">本月连带销售金额</div><div class="value" id="statMonthCrosssell">—</div><div class="detail">潜在成交口径</div></div>
+  </div>
+
+  <!-- 今日行动摘要 -->
+  <div class="summary-card">
+    <div class="card-title">🤖 今日行动摘要 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">自动生成 · 每天最重要的 3 件事</span></div>
+    <div id="summaryList">
+      <div class="loading"><div class="spinner"></div>正在计算意图引擎…</div>
+    </div>
+  </div>
+
+  <!-- 今日重点 -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🔥 今日重点 <span id="hotCount" style="font-size:12px;color:var(--text-muted);font-weight:400;"></span></h2>
+      <a class="more" href="/sales/users?tab=hot">查看全部 →</a>
+    </div>
+    <div class="user-grid" id="hotGrid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+
+  <!-- 连带机会 -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🛍️ 连带销售机会 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">基于已有兴趣推荐整套搭配</span></h2>
+      <a class="more" href="/sales/users?tab=crosssell">查看全部 →</a>
+    </div>
+    <div class="crosssell-grid" id="crosssellGrid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmtMoney = (n) => '¥' + Number(n || 0).toLocaleString('zh-CN');
+const fmtTime = (ts) => {
+  const d = new Date(ts);
+  const pad = (x) => String(x).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// 当前时间
+function tick() {
+  const d = new Date();
+  document.getElementById('nowText').textContent = `${d.getMonth()+1}月${d.getDate()}日 ${fmtTime(d.getTime())} 更新`;
+}
+setInterval(tick, 1000); tick();
+
+// 评分徽章样式
+function scoreBadge(p) {
+  if (p >= 100) return '<span class="score-badge score-hot">🔥 高意向</span>';
+  if (p >= 60) return '<span class="score-badge score-warm">高意向</span>';
+  return '';
+}
+
+// 用户卡片
+function userCardHTML(u) {
+  const signals = [];
+  if (u.isHeatingUp) signals.push('<span class="signal-tag key">⚡ 正在升温</span>');
+  if (u.collectedLooks > 0) signals.push(`<span class="signal-tag">收藏 ${u.collectedLooks}</span>`);
+  if (u.viewedSkus > 0) signals.push(`<span class="signal-tag">浏览商品 ${u.viewedSkus}</span>`);
+  if (u.crosssellScore > 0) signals.push(`<span class="signal-tag">连带 ¥${u.crosssellAmount.toLocaleString()}</span>`);
+  if (!signals.length) signals.push('<span class="signal-tag">近 48h 活跃</span>');
+  return `<div class="user-card" onclick="location.href='/sales/user?key=${encodeURIComponent(u.key)}'">
+    ${scoreBadge(u.priority)}
+    <div class="u-head">
+      <div class="avatar">${u.displayName[0]}</div>
+      <div>
+        <div class="u-name">${u.displayName}</div>
+        <div class="u-score">${u.aid || '—'} · ${u.behaviorCount} 次行为</div>
+      </div>
+    </div>
+    <div class="signals">${signals.join('')}</div>
+    <div class="u-metrics">
+      <div class="m"><div class="v" style="color:var(--primary)">${u.score}</div><div class="k">意向分</div></div>
+      <div class="m"><div class="v">×${u.momentum}</div><div class="k">加速</div></div>
+      <div class="m"><div class="v" style="color:var(--red)">${u.priority}</div><div class="k">优先级</div></div>
+    </div>
+    <div class="u-actions">
+      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();location.href='/sales/user?key=${encodeURIComponent(u.key)}'">查看工作台</button>
+    </div>
+  </div>`;
+}
+
+// 连带卡片
+function crosssellCardHTML(u) {
+  return `<div class="crosssell-card" onclick="location.href='/sales/user?key=${encodeURIComponent(u.key)}'">
+    <div class="cs-head">
+      <div>
+        <div class="cs-name">${u.displayName} <span style="font-size:11px;color:var(--text-muted);font-weight:400;">${u.aid || ''}</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">连带评分 ${u.crosssellScore} 分</div>
+      </div>
+      <div class="cs-amount">${fmtMoney(u.crosssellAmount)}</div>
+    </div>
+    <div class="cs-reason">${u.crosssellReasons.join(' · ') || '潜在连带机会'}</div>
+  </div>`;
+}
+
+// 加载数据
+async function load() {
+  try {
+    // 并发请求：意图列表(hot/crosssell) + 行动摘要 + 跟进任务
+    const [hotRes, crossRes, summaryRes, fuRes] = await Promise.all([
+      fetch('/api/intent/users?tab=hot&size=6').then(r => r.json()),
+      fetch('/api/intent/users?tab=crosssell&size=3').then(r => r.json()),
+      fetch('/api/intent/action-summary').then(r => r.json()),
+      fetch('/api/follow-ups?status=all').then(r => r.json()),
+    ]);
+
+    const hotList = hotRes.data.list || [];
+    const crossList = crossRes.data.list || [];
+    const summary = hotRes.data.summary || {};
+    const followUps = fuRes.data || [];
+
+    // 6 数字
+    document.getElementById('statHot').textContent = summary.hotUsers ?? hotList.length;
+    document.getElementById('statHotDetail').innerHTML = hotList.length ? `Top: <span>${hotList[0].displayName}</span>（优先级 ${hotList[0].priority}）` : '';
+    document.getElementById('statFollowUp').textContent = summary.pendingFollowUps ?? followUps.filter(f => f.status === 'pending').length;
+    const pending = followUps.filter(f => f.status === 'pending');
+    document.getElementById('statFollowUpDetail').innerHTML = pending.length ? `最近: <span>${pending[0].display_name}</span>` : '';
+    document.getElementById('statCrosssell').textContent = fmtMoney(summary.crosssellTotal);
+    document.getElementById('statCrosssellDetail').innerHTML = crossList.length ? `最大: <span>${fmtMoney(crossList[0].crosssellAmount)}</span>` : '';
+    document.getElementById('statContacted').textContent = followUps.filter(f => f.status === 'done').length;
+    document.getElementById('statConversion').innerHTML = '—';
+    document.getElementById('statMonthCrosssell').textContent = fmtMoney(summary.monthCrossSell);
+
+    // 行动摘要
+    const items = summaryRes.data.items || [];
+    document.getElementById('summaryList').innerHTML = items.map((t, i) =>
+      `<div class="summary-item"><div class="num">${i + 1}</div><div class="text">${t}</div></div>`
+    ).join('') || '<div class="empty-state">暂无摘要</div>';
+
+    // 今日重点
+    document.getElementById('hotCount').textContent = `共 ${hotRes.data.total} 位`;
+    document.getElementById('hotGrid').innerHTML = hotList.length
+      ? hotList.map(userCardHTML).join('')
+      : '<div class="empty-state">当前没有正在升温的高意向用户<br>可在「全部会员」中浏览</div>';
+
+    // 连带机会
+    document.getElementById('crosssellGrid').innerHTML = crossList.length
+      ? crossList.map(crosssellCardHTML).join('')
+      : '<div class="empty-state">暂无连带销售机会</div>';
+  } catch (e) {
+    console.error(e);
+    document.getElementById('summaryList').innerHTML = '<div class="empty-state">加载失败：' + e.message + '</div>';
+  }
+}
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

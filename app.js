@@ -3,6 +3,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const intentEngine = require('./intent-engine');
 
 const app = express();
 const PORT = 3000;
@@ -52,6 +53,20 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_bl_aid    ON behavior_log(aid)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_bl_uid    ON behavior_log(uid)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_bl_event  ON behavior_log(event)`);
+
+  // 预约跟进任务表（销售工作台）
+  db.run(`CREATE TABLE IF NOT EXISTS follow_up (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_key      TEXT,
+    display_name  TEXT,
+    plan_time     TEXT,
+    note          TEXT,
+    status        TEXT DEFAULT 'pending',   -- pending / done / canceled
+    created_at    INTEGER,
+    updated_at    INTEGER
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fu_status ON follow_up(status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_fu_key    ON follow_up(user_key)`);
 });
 
 /* ============ 工具函数 ============ */
@@ -289,24 +304,184 @@ app.get('/api/behavior-log/:id', (req, res) => {
   });
 });
 
-/* ============ Dashboard 页面 ============ */
+/* ============ 销售工作台（Intent / Action Engine） ============ */
 
-app.get('/userBehavior', (req, res) => {
-  const htmlPath = path.join(__dirname, 'public', 'dashboard.html');
-  if (fs.existsSync(htmlPath)) {
-    res.sendFile(htmlPath);
-  } else {
-    res.status(404).send('Dashboard 文件未找到，请检查 public/dashboard.html');
-  }
+// 用户意图列表（4 个 Tab：hot 今日重点 / followup 待跟进 / crosssell 连带机会 / all 全部会员）
+app.get('/api/intent/users', (req, res) => {
+  const tab = req.query.tab || 'hot';
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const size = Math.min(Math.max(parseInt(req.query.size) || 20, 1), 100);
+
+  intentEngine.getAllUsers((err, users) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+
+    // 查询待跟进任务（用于 followup Tab 和标记）
+    db.all(`SELECT * FROM follow_up WHERE status = 'pending' ORDER BY created_at DESC`, [], (err2, followUps) => {
+      if (err2) return res.status(500).json({ code: -1, msg: err2.message });
+      const fuByUser = {};
+      followUps.forEach(f => { fuByUser[f.user_key] = f; });
+
+      let list = users.map(u => ({ ...u, followUp: fuByUser[u.key] || null }));
+
+      switch (tab) {
+        case 'hot':     // 今日重点：今天在升温且 Priority 高
+          list = list.filter(u => (u.isHeatingUp || u.todayScore > 0) && u.priority >= 40);
+          break;
+        case 'followup': // 待跟进：有 pending 任务
+          list = list.filter(u => u.followUp);
+          break;
+        case 'crosssell': // 连带机会：有连带评分
+          list = list.filter(u => u.crosssellScore >= 20);
+          break;
+        case 'all':     // 全部会员
+        default:
+          break;
+      }
+
+      const sortKey = tab === 'hot' ? 'priority' : (tab === 'crosssell' ? 'crosssellScore' : 'priority');
+      list.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+
+      const total = list.length;
+      const paged = list.slice((page - 1) * size, page * size);
+
+      // 汇总（顶部 6 个数字）
+      const now = Date.now();
+      const today0 = new Date(now); today0.setHours(0, 0, 0, 0);
+      const summary = {
+        hotUsers: users.filter(u => u.isHeatingUp && u.priority >= 40).length,                    // 今日高意向
+        pendingFollowUps: followUps.length,                                                        // 待跟进任务
+        crosssellTotal: users.reduce((a, u) => a + (u.crosssellAmount || 0), 0),                   // 连带机会金额
+        contactedToday: 0,                                                                         // 已联系（由前端提交，暂为 0）
+        weekConversionRate: 0,                                                                     // 本周转化
+        monthCrossSell: users.reduce((a, u) => a + (u.crosssellAmount || 0), 0),                   // 本月连带金额
+      };
+
+      res.json({ code: 0, data: { list: paged, total, page, size, tab, summary } });
+    });
+  });
 });
+
+// 今日行动摘要（自动生成 3 件事）
+app.get('/api/intent/action-summary', (req, res) => {
+  intentEngine.getAllUsers((err, users) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    const now = Date.now();
+    const DAY = 24 * 3600 * 1000;
+
+    // 1. 今天最热的用户（正在升温）
+    const hot = users.filter(u => u.isHeatingUp).sort((a, b) => b.priority - a.priority)[0];
+    // 2. 加速度最大的用户
+    const rising = users.filter(u => u.momentum >= 1.5 && u.todayScore > 0).sort((a, b) => b.momentum - a.momentum)[0];
+    // 3. 连带机会金额最大
+    const cross = users.filter(u => u.crosssellAmount > 0).sort((a, b) => b.crosssellAmount - a.crosssellAmount)[0];
+
+    const items = [];
+    if (hot) items.push(`【${hot.displayName}】正在升温，今日意向分 ${hot.todayScore}，综合优先级 ${hot.priority}，建议立即联系。`);
+    if (rising) items.push(`【${rising.displayName}】加速最快（Momentum ×${rising.momentum}），近几天从低分快速上升，适合主动推送穿搭。`);
+    if (cross) items.push(`【${cross.displayName}】存在连带机会，潜在金额约 ¥${cross.crosssellAmount.toLocaleString()}，可围绕现有兴趣整套推荐。`);
+    if (!items.length) items.push('今日暂无重点用户，可在"全部会员"中浏览。');
+
+    res.json({ code: 0, data: { items, generatedAt: now } });
+  });
+});
+
+// 用户详情（销售工作台数据）
+app.get('/api/intent/user', (req, res) => {
+  const key = req.query.key || req.query.uid;
+  if (!key) return res.status(400).json({ code: -1, msg: '缺少 key 参数' });
+  intentEngine.getUserDetail(key, (err, user) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    if (!user) return res.status(404).json({ code: -1, msg: '未找到该用户行为数据' });
+
+    db.all(`SELECT * FROM follow_up WHERE user_key = ? ORDER BY created_at DESC`, [user.key], (err2, fus) => {
+      if (err2) return res.status(500).json({ code: -1, msg: err2.message });
+      res.json({ code: 0, data: { ...user, followUps: fus } });
+    });
+  });
+});
+
+// 跟进任务列表
+app.get('/api/follow-ups', (req, res) => {
+  const status = req.query.status || 'pending';
+  const sql = status === 'all'
+    ? `SELECT * FROM follow_up ORDER BY created_at DESC`
+    : `SELECT * FROM follow_up WHERE status = ? ORDER BY created_at DESC`;
+  const params = status === 'all' ? [] : [status];
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    res.json({ code: 0, data: rows });
+  });
+});
+
+// 创建跟进任务
+app.post('/api/follow-ups', (req, res) => {
+  const { user_key, display_name, plan_time, note } = req.body || {};
+  if (!user_key) return res.status(400).json({ code: -1, msg: '缺少 user_key' });
+  const now = Date.now();
+  db.run(
+    `INSERT INTO follow_up (user_key, display_name, plan_time, note, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+    [user_key, display_name || '', plan_time || '', note || '', now, now],
+    function (err) {
+      if (err) return res.status(500).json({ code: -1, msg: err.message });
+      res.json({ code: 0, msg: 'ok', data: { id: this.lastID } });
+    }
+  );
+});
+
+// 更新跟进任务状态（done / canceled）
+app.post('/api/follow-ups/:id/status', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { status } = req.body || {};
+  if (!id || !['done', 'canceled'].includes(status)) return res.status(400).json({ code: -1, msg: '参数错误' });
+  db.run(`UPDATE follow_up SET status = ?, updated_at = ? WHERE id = ?`, [status, Date.now(), id], (err) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    res.json({ code: 0, msg: 'ok' });
+  });
+});
+
+// 删除跟进任务
+app.delete('/api/follow-ups/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!id) return res.status(400).json({ code: -1, msg: '参数错误' });
+  db.run(`DELETE FROM follow_up WHERE id = ?`, [id], (err) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    res.json({ code: 0, msg: 'ok' });
+  });
+});
+
+/* ============ 页面 ============ */
+
+const sendHtml = (res, file, name) => {
+  const htmlPath = path.join(__dirname, 'public', file);
+  if (fs.existsSync(htmlPath)) res.sendFile(htmlPath);
+  else res.status(404).send(`${name} 文件未找到，请检查 public/${file}`);
+};
+
+app.get('/userBehavior', (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
+
+// 销售工作台：首页（6 数字 + 行动摘要 + 今日重点）
+app.get('/sales', (req, res) => sendHtml(res, 'sales-dashboard.html', '销售工作台首页'));
+
+// 销售工作台：用户列表（4 个 Tab）
+app.get('/sales/users', (req, res) => sendHtml(res, 'sales-users.html', '高意向用户列表'));
+
+// 销售工作台：用户详情（销售工作台）
+app.get('/sales/user', (req, res) => sendHtml(res, 'sales-user.html', '用户详情销售工作台'));
 
 /* ============ 启动 ============ */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ 埋点服务运行在 http://0.0.0.0:${PORT}`);
-  console.log(`   健康检查:   GET  /api/health`);
-  console.log(`   埋点上报:   POST /api/track`);
-  console.log(`   日志查询:   GET  /api/behavior-log/list`);
-  console.log(`   事件枚举:   GET  /api/behavior-log/events`);
-  console.log(`   日志详情:   GET  /api/behavior-log/:id`);
-  console.log(`   Dashboard:  GET  /userBehavior`);
+  console.log(`   健康检查:     GET  /api/health`);
+  console.log(`   埋点上报:     POST /api/track`);
+  console.log(`   日志查询:     GET  /api/behavior-log/list`);
+  console.log(`   事件枚举:     GET  /api/behavior-log/events`);
+  console.log(`   日志详情:     GET  /api/behavior-log/:id`);
+  console.log(`   意图列表:     GET  /api/intent/users`);
+  console.log(`   行动摘要:     GET  /api/intent/action-summary`);
+  console.log(`   用户详情:     GET  /api/intent/user?key=`);
+  console.log(`   跟进任务:     GET/POST /api/follow-ups`);
+  console.log(`   Dashboard:    GET  /userBehavior`);
+  console.log(`   销售工作台:   GET  /sales`);
+  console.log(`   用户列表:     GET  /sales/users`);
+  console.log(`   用户详情页:   GET  /sales/user?key=`);
 });

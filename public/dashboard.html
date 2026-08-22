@@ -161,11 +161,27 @@ tr:hover td { background: var(--primary-light); }
 </head>
 <body>
 
+<style>
+/* 统一顶部导航（销售工作台互通） */
+.nav-links { display: flex; gap: 4px; margin-right: 16px; }
+.nav-links a { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+.nav-links a:hover { background: var(--bg); color: var(--text); }
+.nav-links a.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+@media (max-width: 768px) { .nav-links { display: none; } }
+</style>
+
 <div class="header">
   <h1><span class="icon">📊</span> airU+原型demo用户行为日志后台</h1>
-  <div class="header-actions">
-    <label class="auto-refresh-label"><input type="checkbox" id="autoRefresh"> 自动刷新(30s)</label>
-    <button class="btn btn-secondary" onclick="loadData()">🔄 刷新</button>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <nav class="nav-links">
+      <a href="/sales">今日概览</a>
+      <a href="/sales/users">用户列表</a>
+      <a href="/userBehavior" class="active">行为日志</a>
+    </nav>
+    <div class="header-actions">
+      <label class="auto-refresh-label"><input type="checkbox" id="autoRefresh"> 自动刷新(30s)</label>
+      <button class="btn btn-secondary" onclick="loadData()">🔄 刷新</button>
+    </div>
   </div>
 </div>
 
