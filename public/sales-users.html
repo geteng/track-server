@@ -183,6 +183,18 @@ tbody tr:hover td { background: var(--primary-light); }
   <div class="modal">
     <h3>📌 预约跟进</h3>
     <div class="form-item">
+      <label>负责跟进人</label>
+      <select id="fuOwner">
+        <option value="">请选择</option>
+        <option value="小林">小林</option>
+        <option value="小付">小付</option>
+        <option value="小陈">小陈</option>
+        <option value="小葛">小葛</option>
+        <option value="林老师">林老师</option>
+        <option value="赵老师">赵老师</option>
+      </select>
+    </div>
+    <div class="form-item">
       <label>跟进时间</label>
       <select id="fuPlanTime">
         <option value="今天下午">今天下午</option>
@@ -331,6 +343,7 @@ function goDetail(key) {
 function openModal(key, name) {
   curUser = { key: decodeURIComponent(key), name };
   document.getElementById('modalMask').classList.add('show');
+  document.getElementById('fuOwner').value = '';
   document.getElementById('fuNote').value = '';
 }
 function closeModal() { document.getElementById('modalMask').classList.remove('show'); }
@@ -339,11 +352,12 @@ document.getElementById('modalMask').addEventListener('click', (e) => { if (e.ta
 async function submitFollowUp() {
   const planTime = document.getElementById('fuPlanTime').value;
   const note = document.getElementById('fuNote').value;
+  const owner = document.getElementById('fuOwner').value;
   try {
     const res = await fetch('/api/follow-ups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_key: curUser.key, display_name: curUser.name, plan_time: planTime, note })
+      body: JSON.stringify({ user_key: curUser.key, display_name: curUser.name, plan_time: planTime, note, owner })
     });
     const json = await res.json();
     if (json.code === 0) { closeModal(); load(); } else { alert(json.msg); }

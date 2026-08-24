@@ -67,6 +67,12 @@ db.serialize(() => {
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_fu_status ON follow_up(status)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_fu_key    ON follow_up(user_key)`);
+  // 兼容旧表：若缺少 owner 列则自动补加，避免重启报错
+  db.all(`PRAGMA table_info(follow_up)`, (err, cols) => {
+    if (err) return;
+    const names = (cols || []).map(c => c.name);
+    if (!names.includes('owner')) db.run(`ALTER TABLE follow_up ADD COLUMN owner TEXT`);
+  });
 });
 
 /* ============ 工具函数 ============ */
@@ -415,12 +421,12 @@ app.get('/api/follow-ups', (req, res) => {
 
 // 创建跟进任务
 app.post('/api/follow-ups', (req, res) => {
-  const { user_key, display_name, plan_time, note } = req.body || {};
+  const { user_key, display_name, plan_time, note, owner } = req.body || {};
   if (!user_key) return res.status(400).json({ code: -1, msg: '缺少 user_key' });
   const now = Date.now();
   db.run(
-    `INSERT INTO follow_up (user_key, display_name, plan_time, note, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
-    [user_key, display_name || '', plan_time || '', note || '', now, now],
+    `INSERT INTO follow_up (user_key, display_name, plan_time, note, owner, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    [user_key, display_name || '', plan_time || '', note || '', owner || '', now, now],
     function (err) {
       if (err) return res.status(500).json({ code: -1, msg: err.message });
       res.json({ code: 0, msg: 'ok', data: { id: this.lastID } });
