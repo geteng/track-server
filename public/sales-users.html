@@ -114,9 +114,24 @@ tbody tr:hover td { background: var(--primary-light); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 
 @media (max-width: 768px) {
-  .top-nav-inner { padding: 0 12px; }
-  .nav-links a { padding: 8px 8px; font-size: 12px; }
-  .tab { padding: 10px 12px; font-size: 13px; }
+  /* ===== 移动端导航适配 ===== */
+  .top-nav-inner { padding: 0 10px; gap: 8px; height: 52px; }
+  .top-nav .logo { font-size: 14px; gap: 4px; white-space: nowrap; }
+  .top-nav .logo .icon { font-size: 18px; }
+  .nav-links { gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { padding: 6px 8px; font-size: 12px; white-space: nowrap; }
+  .nav-links a.nav-mobile-hide { display: none; }
+  .nav-right { display: none; }
+  /* ===== 移动端表格：只保留 用户/优先级/今日信号/跟进状态/操作 ===== */
+  .col-hide-mobile { display: none; }
+  /* ===== 移动端 Tab / 布局 ===== */
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 10px 12px; font-size: 13px; white-space: nowrap; }
+  .container { padding: 14px 12px 32px; }
+  .page-title { font-size: 17px; }
+  .page-sub { font-size: 12px; }
 }
 </style>
 </head>
@@ -128,7 +143,7 @@ tbody tr:hover td { background: var(--primary-light); }
     <div class="nav-links">
       <a href="/sales">今日概览</a>
       <a href="/sales/users" class="active">用户列表</a>
-      <a href="/userBehavior">行为日志</a>
+      <a href="/userBehavior" class="nav-mobile-hide">行为日志</a>
     </div>
     <div class="nav-right"><span id="nowText"></span></div>
   </div>
@@ -153,12 +168,12 @@ tbody tr:hover td { background: var(--primary-light); }
         <thead>
           <tr>
             <th>用户</th>
-            <th>意向分</th>
-            <th>加速 ×</th>
+            <th class="col-hide-mobile">意向分</th>
+            <th class="col-hide-mobile">加速 ×</th>
             <th>优先级</th>
             <th>今日信号</th>
-            <th>连带机会</th>
-            <th>行为数</th>
+            <th class="col-hide-mobile">连带机会</th>
+            <th class="col-hide-mobile">行为数</th>
             <th>跟进状态</th>
             <th style="min-width:120px;">操作</th>
           </tr>
@@ -288,12 +303,12 @@ function rowHTML(u) {
         </div>
       </div>
     </td>
-    <td>${u.score}</td>
-    <td>×${u.momentum}</td>
+    <td class="col-hide-mobile">${u.score}</td>
+    <td class="col-hide-mobile">×${u.momentum}</td>
     <td><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
     <td>${signals.join('')}</td>
-    <td>${cross}</td>
-    <td>${u.behaviorCount}</td>
+    <td class="col-hide-mobile">${cross}</td>
+    <td class="col-hide-mobile">${u.behaviorCount}</td>
     <td>${fu}</td>
     <td>
       <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openModal('${encodeURIComponent(u.key)}','${u.displayName}')">预约跟进</button>

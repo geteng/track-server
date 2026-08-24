@@ -143,8 +143,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 }
 @media (max-width: 768px) {
   .metrics-row { grid-template-columns: repeat(2, 1fr); }
-  .top-nav-inner { padding: 0 12px; }
-  .nav-links a { padding: 8px 8px; font-size: 12px; }
+  /* ===== 移动端导航适配 ===== */
+  .top-nav-inner { padding: 0 10px; gap: 8px; height: 52px; }
+  .top-nav .logo { font-size: 14px; gap: 4px; white-space: nowrap; }
+  .top-nav .logo .icon { font-size: 18px; }
+  .nav-links { gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { padding: 6px 8px; font-size: 12px; white-space: nowrap; }
+  .nav-links a.nav-mobile-hide { display: none; }
+  .nav-right { display: none; }
 }
 </style>
 </head>
@@ -156,7 +163,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
     <div class="nav-links">
       <a href="/sales">今日概览</a>
       <a href="/sales/users">用户列表</a>
-      <a href="/userBehavior">行为日志</a>
+      <a href="/userBehavior" class="nav-mobile-hide">行为日志</a>
     </div>
     <div class="nav-right"><span id="nowText"></span></div>
   </div>
