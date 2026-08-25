@@ -382,10 +382,10 @@ app.get('/api/intent/action-summary', (req, res) => {
     const cross = users.filter(u => u.crosssellAmount > 0).sort((a, b) => b.crosssellAmount - a.crosssellAmount)[0];
 
     const items = [];
-    if (hot) items.push(`【${hot.displayName}】正在升温，今日意向分 ${hot.todayScore}，综合优先级 ${hot.priority}，建议立即联系。`);
-    if (rising) items.push(`【${rising.displayName}】加速最快（Momentum ×${rising.momentum}），近几天从低分快速上升，适合主动推送穿搭。`);
-    if (cross) items.push(`【${cross.displayName}】存在连带机会，潜在金额约 ¥${cross.crosssellAmount.toLocaleString()}，可围绕现有兴趣整套推荐。`);
-    if (!items.length) items.push('今日暂无重点用户，可在"全部会员"中浏览。');
+    if (hot) items.push({ key: hot.key, text: `【${hot.displayName}】正在升温，今日意向分 ${hot.todayScore}，综合优先级 ${hot.priority}，建议立即联系。` });
+    if (rising) items.push({ key: rising.key, text: `【${rising.displayName}】加速最快（Momentum ×${rising.momentum}），近几天从低分快速上升，适合主动推送穿搭。` });
+    if (cross) items.push({ key: cross.key, text: `【${cross.displayName}】存在连带机会，潜在金额约 ¥${cross.crosssellAmount.toLocaleString()}，可围绕现有兴趣整套推荐。` });
+    if (!items.length) items.push({ key: '', text: '今日暂无重点用户，可在"全部会员"中浏览。' });
 
     res.json({ code: 0, data: { items, generatedAt: now } });
   });

@@ -49,8 +49,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 
 /* ===== 6 数字卡片 ===== */
 .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
-.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.stat-card::after { content: '→'; position: absolute; right: 14px; bottom: 12px; font-size: 16px; color: var(--text-muted); opacity: 0; transform: translateX(-4px); transition: all 0.2s; }
+.stat-card:hover::after { opacity: 1; transform: translateX(0); }
 .stat-card .icon-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; }
 .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .stat-card .value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
@@ -67,8 +69,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 /* ===== 今日行动摘要 ===== */
 .summary-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; }
 .summary-card .card-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.summary-item { display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--bg); margin-bottom: 10px; align-items: flex-start; }
+.summary-item { display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--bg); margin-bottom: 10px; align-items: flex-start; text-decoration: none; color: inherit; cursor: pointer; transition: all 0.2s; }
 .summary-item:last-child { margin-bottom: 0; }
+.summary-item:hover { background: var(--primary-light); transform: translateX(2px); }
 .summary-item .num { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .summary-item .text { font-size: 13px; line-height: 1.6; color: var(--text); }
 .summary-item .text b { color: var(--primary); }
@@ -167,12 +170,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 
   <!-- 6 个数字 -->
   <div class="stats-row" id="statsRow">
-    <div class="stat-card"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
-    <div class="stat-card"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
-    <div class="stat-card"><div class="icon-badge bg-green">🛍️</div><div class="label">连带销售机会金额</div><div class="value" id="statCrosssell">—</div><div class="detail" id="statCrosssellDetail"></div></div>
-    <div class="stat-card"><div class="icon-badge bg-purple">💬</div><div class="label">今日已联系用户</div><div class="value" id="statContacted">—</div><div class="detail">来自跟进任务完成</div></div>
-    <div class="stat-card"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
-    <div class="stat-card"><div class="icon-badge bg-red">💰</div><div class="label">本月连带销售金额</div><div class="value" id="statMonthCrosssell">—</div><div class="detail">潜在成交口径</div></div>
+    <div class="stat-card" data-href="/sales/users?tab=hot"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
+    <div class="stat-card" data-href="/sales/users?tab=followup"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
+    <div class="stat-card" data-href="/sales/users?tab=crosssell"><div class="icon-badge bg-green">🛍️</div><div class="label">连带销售机会金额</div><div class="value" id="statCrosssell">—</div><div class="detail" id="statCrosssellDetail"></div></div>
+    <div class="stat-card" data-href="/sales/users?tab=followup"><div class="icon-badge bg-purple">💬</div><div class="label">今日已联系用户</div><div class="value" id="statContacted">—</div><div class="detail">来自跟进任务完成</div></div>
+    <div class="stat-card" data-href="/sales/users?tab=all"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
+    <div class="stat-card" data-href="/sales/users?tab=crosssell"><div class="icon-badge bg-red">💰</div><div class="label">本月连带销售金额</div><div class="value" id="statMonthCrosssell">—</div><div class="detail">潜在成交口径</div></div>
   </div>
 
   <!-- 今日行动摘要 -->
@@ -301,9 +304,12 @@ async function load() {
 
     // 行动摘要
     const items = summaryRes.data.items || [];
-    document.getElementById('summaryList').innerHTML = items.map((t, i) =>
-      `<div class="summary-item"><div class="num">${i + 1}</div><div class="text">${t}</div></div>`
-    ).join('') || '<div class="empty-state">暂无摘要</div>';
+    document.getElementById('summaryList').innerHTML = items.length
+      ? items.map((it, i) => {
+          const href = it.key ? `/sales/user?key=${encodeURIComponent(it.key)}` : '/sales/users?tab=all';
+          return `<a class="summary-item" href="${href}"><div class="num">${i + 1}</div><div class="text">${it.text}</div></a>`;
+        }).join('')
+      : '<div class="empty-state">暂无摘要</div>';
 
     // 今日重点
     document.getElementById('hotCount').textContent = `共 ${hotRes.data.total} 位`;
@@ -322,6 +328,11 @@ async function load() {
 }
 load();
 setInterval(load, 30000);
+
+// 磁贴点击跳转
+document.querySelectorAll('.stat-card[data-href]').forEach(card => {
+  card.addEventListener('click', () => { window.location.href = card.dataset.href; });
+});
 </script>
 </body>
 </html>
