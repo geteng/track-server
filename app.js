@@ -463,6 +463,9 @@ const sendHtml = (res, file, name) => {
   else res.status(404).send(`${name} 文件未找到，请检查 public/${file}`);
 };
 
+// 根路径：默认进入销售工作台
+app.get('/', (req, res) => res.redirect('/sales'));
+
 app.get('/userBehavior', (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
 
 // 销售工作台：首页（6 数字 + 行动摘要 + 今日重点）
