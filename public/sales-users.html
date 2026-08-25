@@ -170,11 +170,11 @@ tbody tr:hover td { background: var(--primary-light); }
             <th>用户</th>
             <th class="col-hide-mobile">意向分</th>
             <th class="col-hide-mobile">加速 ×</th>
-            <th>优先级</th>
+            <th class="col-hide-mobile">优先级</th>
             <th>今日信号</th>
             <th class="col-hide-mobile">连带机会</th>
             <th class="col-hide-mobile">行为数</th>
-            <th>跟进状态</th>
+            <th class="col-hide-mobile">跟进状态</th>
             <th style="min-width:120px;">操作</th>
           </tr>
         </thead>
@@ -305,11 +305,11 @@ function rowHTML(u) {
     </td>
     <td class="col-hide-mobile">${u.score}</td>
     <td class="col-hide-mobile">×${u.momentum}</td>
-    <td><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
+    <td class="col-hide-mobile"><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
     <td>${signals.join('')}</td>
     <td class="col-hide-mobile">${cross}</td>
     <td class="col-hide-mobile">${u.behaviorCount}</td>
-    <td>${fu}</td>
+    <td class="col-hide-mobile">${fu}</td>
     <td>
       <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openModal('${encodeURIComponent(u.key)}','${u.displayName}')">预约跟进</button>
       <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();goDetail('${encodeURIComponent(u.key)}')">详情</button>
