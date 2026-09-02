@@ -228,7 +228,7 @@ document.querySelectorAll('#quickBtns .quick-btn').forEach(b => {
 async function loadEvents() {
   try {
     const j = await fetch('/api/behavior-log/events').then(r => r.json());
-    const evs = (j.data && j.data.events) || j.events || [];
+    const evs = Array.isArray(j.data) ? j.data : ((j.data && j.data.events) || j.events || []);
     const sel = document.getElementById('evSelect');
     sel.innerHTML = '<option value="">全部事件</option>' + evs.map(e => '<option value="' + esc(e) + '">' + esc(evLabel(e)) + '（' + esc(e) + '）</option>').join('');
   } catch (e) {}
