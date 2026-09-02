@@ -469,6 +469,9 @@ app.use('/design1', express.static(path.join(__dirname, 'public', 'design1')));
 // 新版 UI（design2）静态资源：/design2/xxx.html 直接访问
 app.use('/design2', express.static(path.join(__dirname, 'public', 'design2')));
 
+// 新版 UI（design3）静态资源：/design3/xxx.html 直接访问
+app.use('/design3', express.static(path.join(__dirname, 'public', 'design3')));
+
 // 根路径：默认进入销售工作台
 app.get('/', (req, res) => res.redirect('/sales'));
 

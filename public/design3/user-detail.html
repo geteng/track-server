@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户详情 — airU 销售工作台</title>
+<link rel="stylesheet" href="./shared-v3.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .user-info-card {
+    background: var(--card); border: var(--border); border-radius: 24px;
+    box-shadow: var(--shadow-card); padding: 24px;
+    display: flex; align-items: center; gap: 22px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .ui-main { flex: 1; min-width: 300px; }
+  .ui-stats { display: flex; gap: 0; border: var(--border); border-radius: 18px; overflow: hidden; box-shadow: 2px 2px 0 var(--stroke); flex-shrink: 0; }
+  .ui-stat { padding: 14px 22px; text-align: center; background: var(--card); }
+  .ui-stat + .ui-stat { border-left: 2px solid var(--stroke); }
+  .ui-stat-num { font-size: 24px; font-weight: 800; color: var(--fg); line-height: 1.2; }
+  .ui-stat-lb { font-size: 11px; font-weight: 700; color: var(--fg-3); }
+  .ui-actions { display: flex; gap: 10px; flex-direction: column; flex-shrink: 0; }
+  .detail-cols { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+  .big-avatar {
+    width: 78px; height: 78px; border-radius: 50%;
+    border: var(--border); box-shadow: 4px 4px 0 var(--stroke);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .user-tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="./dashboard.html" class="nav-brand">
+      <img src="https://xla-persist.xingliu.art/wm/artifacts/agent/2qj4RM9pEKF9gztL.png" alt="airU" class="nav-mascot" onerror="this.outerHTML='<div class=&quot;nav-mascot&quot; style=&quot;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;&quot;>U</div>'">
+      <span class="nav-brand-text">airU 销售工作台</span>
+    </a>
+    <div class="nav-menu">
+      <a href="./dashboard.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        今日概览
+      </a>
+      <a href="./users.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        高意向用户
+      </a>
+      <a href="./behavior.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        行为日志
+      </a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-icon-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="nav-notif-dot"></span>
+      </div>
+      <div class="nav-avatar">张</div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="./dashboard.html">今日概览</a>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <a href="./users.html">高意向用户</a>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <span class="current" id="bcName">用户详情</span>
+  </div>
+
+  <!-- User Info Card -->
+  <div class="user-info-card" id="headerBox" style="justify-content:center;"><div class="loading"><span class="spinner"></span>加载用户信息…</div></div>
+
+  <!-- Content -->
+  <div class="detail-cols" id="content" style="visibility:hidden;">
+    <!-- Left -->
+    <div>
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="card-title"><div class="card-dot" style="background:var(--purple);"></div>最近行为时间线</div>
+          <span class="tag tag-purple" id="tlCnt">-</span>
+        </div>
+        <div id="timelineBox"><div class="loading">加载中…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="card-dot" style="background:var(--yellow);"></div>评分构成</div>
+        </div>
+        <div id="scoreBox"><div class="loading">加载中…</div></div>
+      </div>
+    </div>
+    <!-- Right -->
+    <div>
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="card-title"><div class="card-dot" style="background:var(--pink);"></div>推荐跟进动作</div>
+        </div>
+        <div id="scriptBox"><div class="loading">加载中…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="card-dot" style="background:var(--green);"></div>跟进记录</div>
+          <button class="btn btn-primary btn-sm" onclick="openFu()">＋ 预约跟进</button>
+        </div>
+        <div id="fuBox"><div class="empty">暂无跟进记录</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 预约 Modal -->
+<div class="modal-overlay" id="fuModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🗓️ 预约跟进 — <span id="modalName"></span></div>
+      <div class="modal-close" onclick="closeFu()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">跟进对象</label>
+        <input class="form-input" id="fuUser" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label">跟进人员</label>
+        <select class="form-select" id="fuOwner">
+          <option value="">请选择</option>
+          <option>小林</option><option>小付</option><option>小陈</option>
+          <option>小葛</option><option>林老师</option><option>赵老师</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">跟进时间</label>
+        <select class="form-select" id="fuPlanTime">
+          <option value="">请选择</option>
+          <option>今天下午</option><option>明天上午</option><option>明天下午</option>
+          <option>后天</option><option>本周内</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">备注说明</label>
+        <textarea class="form-textarea" id="fuNote" placeholder="请输入跟进备注..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeFu()">取消</button>
+      <button class="btn btn-primary" onclick="submitFu()">确认预约 ✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AV_CLS = ['var(--pink)','var(--purple)','var(--blue)','var(--green)','var(--yellow)','#FF9F5B','var(--pink-deep)','var(--blue-deep)','var(--green-deep)','#6B6577'];
+let U = null;
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n){ return '¥' + Number(n || 0).toLocaleString(); }
+function relTime(ts){ const diff = Date.now() - ts; if (diff < 60e3) return '刚刚'; if (diff < 3600e3) return Math.floor(diff / 60e3) + ' 分钟前'; if (diff < 86400e3) return Math.floor(diff / 3600e3) + ' 小时前'; return Math.floor(diff / 86400e3) + ' 天前'; }
+
+const EV_MAP = {
+  'page_view':'页面浏览','item_view':'浏览商品','item_click':'点击商品','add_to_cart':'加购','collect':'收藏','share':'分享',
+  'submit_order':'提交订单','pay_success':'支付成功','stay_duration':'停留','search':'搜索','user_login':'登录','form_submit':'提交表单',
+  'click_element':'点击元素','click_nav':'点击导航','tab_switch':'切换Tab','click_button':'点击按钮','btn_click_tryon':'AI试穿',
+  'click_buy':'点击购买','click_vip_plan':'点击会员方案','btn_click_customize':'开始定制','btn_click_look':'查看穿搭','btn_click_note':'写笔记',
+  'customize_collect_look':'定制收藏','customize_consult_open':'打开咨询','customize_consult_close':'关闭咨询','customize_page_view':'定制页浏览','customize_page_leave':'离开定制页',
+  'error_event':'异常事件','btn_click_upload':'上传照片','tryon_complete':'试穿完成','outfit_generate':'生成穿搭'
+};
+function evLabel(e){ return EV_MAP[e] || e; }
+function dotCls(e){
+  const s = String(e);
+  if (/(pay|order|buy|collect|favorite|share|cart|vip|consult)/i.test(s)) return 'pink';
+  if (/tryon|customize|outfit|note/i.test(s)) return 'purple';
+  if (/page_view|pageview/i.test(s)) return 'blue';
+  if (/search/i.test(s)) return 'yellow';
+  return 'green';
+}
+
+async function init() {
+  const key = new URLSearchParams(location.search).get('key');
+  if (!key) { document.getElementById('content').style.visibility = 'visible'; document.getElementById('headerBox').innerHTML = '<div class="empty">缺少 key 参数，请从高意向用户列表进入 🎈</div>'; return; }
+  try {
+    const uj = await fetch('/api/intent/user?key=' + encodeURIComponent(key)).then(r => r.json());
+    if (uj.code !== 0) throw new Error(uj.msg || '用户不存在');
+    U = uj.data;
+    render();
+  } catch (e) {
+    document.getElementById('content').style.visibility = 'visible';
+    document.getElementById('headerBox').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function prioBadge(p) {
+  if (p >= 60) return '<span class="tag tag-danger">紧急</span>';
+  if (p >= 30) return '<span class="tag tag-warning">重要</span>';
+  return '<span class="tag tag-success">一般</span>';
+}
+
+function render() {
+  const u = U;
+  document.title = u.displayName + ' — airU 销售工作台';
+  document.getElementById('bcName').textContent = u.displayName;
+  const bg = AV_CLS[((u.displayName || '?').charCodeAt(0) || 0) % AV_CLS.length];
+
+  document.getElementById('headerBox').innerHTML = `
+    <div class="big-avatar" style="background:${bg};">${esc((u.displayName || '?')[0])}</div>
+    <div class="ui-main">
+      <div class="user-tags">
+        <span style="font-size:24px;font-weight:800;letter-spacing:-0.01em;">${esc(u.displayName)}</span>
+        ${u.isHeatingUp ? '<span class="tag tag-danger">⚡ 升温中</span>' : ''}
+        ${u.crosssellScore > 0 ? '<span class="tag tag-purple">🛍 连带机会</span>' : ''}
+        ${prioBadge(u.priority)}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        <span class="tag tag-muted" style="font-size:11px;">🎂 加入 ${u.openDays || 0} 天</span>
+        <span class="tag tag-muted" style="font-size:11px;">💾 行为 ${u.behaviorCount || 0} 次</span>
+        <span class="tag tag-muted" style="font-size:11px;">👗 收藏穿搭 ${u.collectedLooks || 0}</span>
+        <span class="tag tag-muted" style="font-size:11px;">🕑 最近活跃 ${u.lastActive ? relTime(u.lastActive) : '—'}</span>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--fg-2);font-family:'Courier New',monospace;">
+        AID：${esc(u.aid || '—')}${u.uid ? ' · UID：' + esc(u.uid) : ''} · Key：${esc(u.key || '—')}
+      </div>
+    </div>
+    <div class="ui-stats">
+      <div class="ui-stat">
+        <div class="ui-stat-num" style="color:var(--pink-deep);">${u.score != null ? Math.round(u.score) : '—'}</div>
+        <div class="ui-stat-lb">意向评分</div>
+      </div>
+      <div class="ui-stat">
+        <div class="ui-stat-num" style="color:var(--blue-deep);">${u.todayScore != null ? Math.round(u.todayScore) : '—'}</div>
+        <div class="ui-stat-lb">今日活跃分</div>
+      </div>
+      <div class="ui-stat">
+        <div class="ui-stat-num" style="color:var(--green-deep);font-size:18px;">${fmtMoney(u.crosssellAmount)}</div>
+        <div class="ui-stat-lb">潜在连带金额</div>
+      </div>
+      <div class="ui-stat">
+        <div class="ui-stat-num" style="color:var(--yellow-deep);">×${u.momentum != null ? u.momentum : '—'}</div>
+        <div class="ui-stat-lb">加速指数</div>
+      </div>
+    </div>
+    <div class="ui-actions">
+      <button class="btn btn-primary" onclick="openFu()">📅 预约跟进</button>
+      <button class="btn btn-secondary" onclick="location.href='./behavior.html'">🧾 查看行为日志</button>
+      <button class="btn btn-yellow" onclick="location.href='./users.html'">← 返回列表</button>
+    </div>`;
+
+  // 时间线
+  const tl = u.timeline || [];
+  document.getElementById('tlCnt').textContent = '最近 ' + Math.min(tl.length, 40) + ' 条';
+  document.getElementById('timelineBox').innerHTML = tl.length
+    ? tl.slice(0, 40).map(t => `
+      <div class="timeline-item">
+        <div class="timeline-dot ${dotCls(t.event)}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-title">${esc(evLabel(t.event))}${t.eventMsg ? ' · <span style="font-weight:600;color:var(--fg-2);">' + esc(t.eventMsg) + '</span>' : ''}</div>
+          <div class="timeline-desc" style="word-break:break-all;">${esc(t.url || '')}</div>
+          <div class="timeline-time">${esc(t.formattedTime || '')}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty">暂无行为记录 🎈</div>';
+
+  // 评分构成
+  const details = (u.scoreDetails || []).slice(0, 12).sort((a, b) => Math.abs(b.point || 0) - Math.abs(a.point || 0));
+  const maxAbs = Math.max(1, ...details.map(d => Math.abs(d.point || 0)));
+  document.getElementById('scoreBox').innerHTML = details.length
+    ? details.map(d => `
+      <div class="progress-row">
+        <span class="progress-label">${esc(d.label || d.event)}</span>
+        <div class="progress-bg">
+          <div class="progress-fill" style="width:${Math.max(2, (Math.abs(d.point || 0) / maxAbs) * 100)}%;background:${d.point < 0 ? 'linear-gradient(90deg,#FFC2C2,#FF6B6B)' : 'linear-gradient(90deg,#FFD3E4,#FF7BAC)'};"></div>
+        </div>
+        <span class="progress-val" style="color:${d.point < 0 ? '#F0568C' : '#5BBF3A'};">${d.point >= 0 ? '+' : ''}${Math.round(d.point * 10) / 10}</span>
+      </div>`).join('')
+    : '<div class="empty">暂无评分明细</div>';
+
+  // 推荐动作
+  const scripts = [];
+  if (u.isHeatingUp) scripts.push({ label: '快速升温', text: u.displayName + ' 行为热度上升，建议今日内主动联系，优先推荐当季热门款。' });
+  if (u.collectedLooks > 0) scripts.push({ label: '收藏穿搭跟进', text: '收藏了 ' + u.collectedLooks + ' 套穿搭，询问是否想试穿同款，引导到店或 AI 试穿。' });
+  if (u.crosssellScore > 0 && (u.crosssellReasons || []).length) scripts.push({ label: '连带机会', text: '潜在连带需求（' + (u.crosssellReasons || []).join('、') + '），顺势做整套搭配推荐。' });
+  if (u.viewedSkus > 0) scripts.push({ label: '浏览商品', text: '浏览了 ' + u.viewedSkus + ' 件商品，询问偏好尺码与风格，精准推荐。' });
+  if (u.openDays >= 3) scripts.push({ label: '老客维护', text: '连续 ' + u.openDays + ' 天打开的老客，发轻量问候 + 新品预告维持到店频率。' });
+  scripts.push({ label: '标准开场', text: u.displayName + ' 您好，我是 airU 形象顾问～最近有什么场合需要帮忙搭配吗？' });
+  document.getElementById('scriptBox').innerHTML = scripts.slice(0, 4).map((s, i) => '<div class="script-bubble" style="background:' + ['var(--blue-light)','var(--pink-light)','var(--green-light)','var(--yellow-light)'][i] + ';">' + esc(s.text) + '</div>').join('');
+
+  renderFu();
+  document.getElementById('content').style.visibility = 'visible';
+}
+
+function renderFu() {
+  const fus = U.followUps || [];
+  document.getElementById('fuBox').innerHTML = fus.length
+    ? fus.map(f => {
+        const m = { pending: ['var(--yellow)', '待跟进', 'tag-warning'], done: ['var(--green)', '已跟进', 'tag-success'], canceled: ['var(--fg-3)', '已取消', 'tag-muted'] }[f.status] || ['var(--fg-3)', f.status, 'tag-muted'];
+        return `<div class="follow-record">
+          <div class="follow-dot" style="background:${m[0]};"></div>
+          <div style="flex:1;">
+            <div class="flex justify-between items-center gap-2">
+              <span class="follow-title"><span class="tag ${m[2]}" style="font-size:10px;padding:1px 8px;">${m[1]}</span> ${esc(f.plan_time || '未设定时间')}</span>
+              ${f.status === 'pending' ? '<div style="display:flex;gap:5px;"><button class="btn btn-green btn-xs" data-fuact="done" data-id="' + f.id + '">完成</button><button class="btn btn-secondary btn-xs" data-fuact="canceled" data-id="' + f.id + '">取消</button></div>' : ''}
+            </div>
+            ${f.note ? '<div style="font-size:12px;color:var(--fg-2);margin-top:3px;">💬 ' + esc(f.note) + '</div>' : ''}
+            <div class="follow-meta">负责人 ${esc(f.owner || '—')} · ${esc(new Date(f.created_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}</div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty">暂无跟进记录 🎈</div>';
+
+  document.querySelectorAll('[data-fuact]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const act = btn.dataset.fuact, st = { done: '完成', canceled: '取消' }[act];
+      if (!confirm('确认要' + st + '这条预约吗？')) return;
+      try {
+        const j = await fetch('/api/follow-ups/' + btn.dataset.id + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: act }) }).then(r => r.json());
+        if (j.code !== 0) throw new Error(j.msg);
+        const ud = await fetch('/api/intent/user?key=' + encodeURIComponent(U.key)).then(r => r.json());
+        U.followUps = (ud.data && ud.data.followUps) || [];
+        renderFu();
+      } catch (e) { alert('操作失败：' + e.message); }
+    });
+  });
+}
+
+function openFu() {
+  if (!U) return;
+  document.getElementById('modalName').textContent = U.displayName;
+  document.getElementById('fuUser').value = U.displayName + '（' + U.key + '）';
+  document.getElementById('fuOwner').value = '';
+  document.getElementById('fuPlanTime').value = '';
+  document.getElementById('fuNote').value = '';
+  document.getElementById('fuModal').classList.add('open');
+}
+function closeFu() { document.getElementById('fuModal').classList.remove('open'); }
+async function submitFu() {
+  const owner = document.getElementById('fuOwner').value, planTime = document.getElementById('fuPlanTime').value, note = document.getElementById('fuNote').value;
+  if (!owner) { alert('请选择跟进人员'); return; }
+  if (!planTime) { alert('请选择跟进时间'); return; }
+  try {
+    const j = await fetch('/api/follow-ups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_key: U.key, display_name: U.displayName, plan_time: planTime, note, owner }) }).then(r => r.json());
+    if (j.code !== 0) throw new Error(j.msg);
+    closeFu();
+    const ud = await fetch('/api/intent/user?key=' + encodeURIComponent(U.key)).then(r => r.json());
+    U.followUps = (ud.data && ud.data.followUps) || [];
+    renderFu();
+  } catch (e) { alert('提交失败：' + e.message); }
+}
+document.getElementById('fuModal').addEventListener('click', e => { if (e.target.id === 'fuModal') closeFu(); });
+
+init();
+</script>
+</body>
+</html>

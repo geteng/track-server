@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日概览 — airU 销售工作台</title>
+<link rel="stylesheet" href="./shared-v3.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .stat-sub { font-size: 12px; font-weight: 700; color: var(--fg-3); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+  .dash-row { display: grid; grid-template-columns: 380px 1fr; gap: 24px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="./dashboard.html" class="nav-brand">
+      <img src="https://xla-persist.xingliu.art/wm/artifacts/agent/2qj4RM9pEKF9gztL.png" alt="airU" class="nav-mascot" onerror="this.outerHTML='<div class=&quot;nav-mascot&quot; style=&quot;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;&quot;>U</div>'">
+      <span class="nav-brand-text">airU 销售工作台</span>
+    </a>
+    <div class="nav-menu">
+      <a href="./dashboard.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        今日概览
+      </a>
+      <a href="./users.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        高意向用户
+      </a>
+      <a href="./behavior.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        行为日志
+      </a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-icon-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="nav-notif-dot"></span>
+      </div>
+      <div class="nav-avatar">张</div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;display:inline;vertical-align:middle;margin-right:6px;color:var(--pink);"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      今日概览
+    </h1>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:12px;font-weight:800;color:var(--fg-3);" id="nowText">—</span>
+      <div class="mascot-bubble">
+        <img src="https://xla-persist.xingliu.art/wm/artifacts/agent/2qj4RM9pEKF9gztL.png" alt="mascot" class="mascot-bubble-img" onerror="this.outerHTML='<span style=&quot;font-size:20px;&quot;>✨</span>'">
+        <span class="mascot-bubble-text" id="mascotText">今天也要加油跟进哦！</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="grid-4" style="margin-bottom:24px;">
+    <div class="stat-card">
+      <div class="stat-badge" style="background:var(--pink-light);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--pink-deep)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-value" id="st1">—</div>
+      <div class="stat-label">高意向用户</div>
+      <span class="stat-trend up" id="st1t"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>今日</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-badge" style="background:var(--yellow-light);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--yellow-deep)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="stat-value" id="st2">—</div>
+      <div class="stat-label">待跟进任务</div>
+      <span class="stat-trend down" id="st2t"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>预约中</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-badge" style="background:var(--green-light);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--green-deep)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <div class="stat-value" style="font-size:22px;" id="st3">—</div>
+      <div class="stat-label">连带销售机会</div>
+      <span class="stat-trend up"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>潜在金额</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-badge" style="background:var(--blue-light);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--blue-deep)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </div>
+      <div class="stat-value" id="st4">—</div>
+      <div class="stat-label">全部会员</div>
+      <span class="stat-trend up"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>会员总数</span>
+    </div>
+  </div>
+
+  <!-- Row: Action + Focus Users -->
+  <div class="dash-row">
+
+    <!-- 今日行动建议 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-dot" style="background:var(--pink);"></div>
+          今日行动建议
+        </div>
+        <span class="tag tag-pink" id="actCnt">…</span>
+      </div>
+      <div id="actionList"><div class="loading"><span class="spinner"></span>加载中…</div></div>
+    </div>
+
+    <!-- 今日重点跟进 -->
+    <div class="card" style="padding:0;overflow:visible;">
+      <div style="padding:20px 24px 16px;">
+        <div class="card-header" style="margin-bottom:0;">
+          <div class="card-title">
+            <div class="card-dot" style="background:var(--blue);"></div>
+            今日重点跟进
+          </div>
+          <a href="./users.html" class="btn btn-secondary btn-sm">查看全部 →</a>
+        </div>
+      </div>
+      <div class="table-outer" style="margin:0 24px 24px;box-shadow:none;border-radius:14px;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户</th>
+                <th>意向分</th>
+                <th>加速×</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="hotBody"><tr><td colspan="5"><div class="loading">加载中…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 连带销售推荐 -->
+  <div class="card" style="margin-bottom:8px;">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-dot" style="background:var(--green);"></div>
+        连带销售推荐
+        <svg viewBox="0 0 20 20" width="18" height="18" style="margin-left:4px;"><polygon points="10,2 12.4,7.5 18.5,8.1 14,12.1 15.4,18 10,15 4.6,18 6,12.1 1.5,8.1 7.6,7.5" fill="var(--yellow)" stroke="var(--stroke)" stroke-width="1.5"/></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;color:var(--fg-2);font-weight:600;">总潜力</span>
+        <span style="font-size:20px;font-weight:800;color:var(--green-deep);" id="crossTotal">¥—</span>
+      </div>
+    </div>
+    <div class="grid-3" id="crossGrid"></div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="fuModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🗓️ 预约跟进 — <span id="modalName"></span></div>
+      <div class="modal-close" onclick="closeFu()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">跟进人员</label>
+        <select class="form-select" id="fuOwner">
+          <option value="">请选择</option>
+          <option>小林</option><option>小付</option><option>小陈</option>
+          <option>小葛</option><option>林老师</option><option>赵老师</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">跟进时间</label>
+        <select class="form-select" id="fuPlanTime">
+          <option value="">请选择</option>
+          <option>今天下午</option><option>明天上午</option><option>明天下午</option>
+          <option>后天</option><option>本周内</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">备注说明</label>
+        <textarea class="form-textarea" id="fuNote" placeholder="请输入跟进备注..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeFu()">取消</button>
+      <button class="btn btn-primary" onclick="submitFu()">确认预约 ✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AV = [['av-pink','何'],['av-purple','李'],['av-blue','陈'],['av-green','王'],['av-yellow','刘'],['av-muted','孙'],['av-pink','周'],['av-purple','吴'],['av-blue','郑'],['av-green','黄']];
+const AV_CLS = ['var(--pink)','var(--purple)','var(--blue)','var(--green)','var(--yellow)','#FF9F5B','var(--pink-deep)','var(--blue-deep)','var(--green-deep)','#6B6577'];
+function avBg(name){ const ch = (name || '?').charCodeAt(0) || 0; return AV_CLS[ch % AV_CLS.length]; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n){ return '¥' + Number(n || 0).toLocaleString(); }
+
+setInterval(() => {
+  const d = new Date(); const p = x => String(x).padStart(2,'0');
+  const el = document.getElementById('nowText'); if (el) el.textContent = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}, 1000);
+
+let FU = { key: '', name: '' };
+function goDetail(key){ location.href = './user-detail.html?key=' + encodeURIComponent(key); }
+function openFu(key, name){ FU = { key, name }; document.getElementById('modalName').textContent = name; document.getElementById('fuOwner').value = ''; document.getElementById('fuPlanTime').value = ''; document.getElementById('fuNote').value = ''; document.getElementById('fuModal').classList.add('open'); }
+function closeFu(){ document.getElementById('fuModal').classList.remove('open'); }
+async function submitFu() {
+  const owner = document.getElementById('fuOwner').value, planTime = document.getElementById('fuPlanTime').value, note = document.getElementById('fuNote').value;
+  if (!FU.key) { alert('缺少用户标识'); return; }
+  if (!owner) { alert('请选择跟进人员'); return; }
+  if (!planTime) { alert('请选择跟进时间'); return; }
+  try {
+    const j = await fetch('/api/follow-ups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_key: FU.key, display_name: FU.name, plan_time: planTime, note, owner }) }).then(r => r.json());
+    if (j.code !== 0) throw new Error(j.msg);
+    closeFu(); alert('预约成功 ✓'); load();
+  } catch (e) { alert('提交失败：' + e.message); }
+}
+document.getElementById('fuModal').addEventListener('click', e => { if (e.target.id === 'fuModal') closeFu(); });
+
+function statusTag(u){
+  if (u.isHeatingUp) return '<span class="tag tag-danger">⚡ 升温中</span>';
+  if (u.crosssellScore > 0) return '<span class="tag tag-purple">🛍 连带</span>';
+  return '<span class="tag tag-success">活跃</span>';
+}
+
+async function load() {
+  try {
+    const [hotRes, crossRes, actRes, fuRes, allRes] = await Promise.all([
+      fetch('/api/intent/users?tab=hot&size=6').then(r => r.json()),
+      fetch('/api/intent/users?tab=crosssell&size=3').then(r => r.json()),
+      fetch('/api/intent/action-summary').then(r => r.json()),
+      fetch('/api/follow-ups?status=all').then(r => r.json()),
+      fetch('/api/intent/users?tab=all&size=1').then(r => r.json()),
+    ]);
+    const hot = hotRes.data || { list: [], summary: {} };
+    const hotList = hot.list || [];
+    const summary = hot.summary || {};
+    const crossList = (crossRes.data && crossRes.data.list) || [];
+    const items = (actRes.data && actRes.data.items) || [];
+    const fus = fuRes.data || [];
+    const allTotal = (allRes.data && allRes.data.total) || hotList.length;
+    const pending = fus.filter(f => f.status === 'pending');
+    const doneCnt = fus.filter(f => f.status === 'done').length;
+
+    // 统计卡
+    document.getElementById('st1').textContent = summary.hotUsers != null ? summary.hotUsers : hot.total;
+    document.getElementById('st1t').textContent = '今日重点 ' + (hot.total || 0) + ' 人';
+    document.getElementById('st2').textContent = summary.pendingFollowUps != null ? summary.pendingFollowUps : pending.length;
+    document.getElementById('st2t').textContent = '已完成 ' + doneCnt + ' 单';
+    document.getElementById('st3').textContent = fmtMoney(summary.crosssellTotal);
+    document.getElementById('st4').textContent = allTotal;
+
+    // 吉祥物气泡
+    const mascot = document.getElementById('mascotText');
+    if (hotList.length) mascot.textContent = (hotList[0].displayName || '') + ' 正在升温，快去跟进哦！';
+    else mascot.textContent = '今天也要加油跟进哦！';
+
+    // 行动建议（分级）
+    document.getElementById('actCnt').textContent = items.length + ' 条';
+    document.getElementById('actionList').innerHTML = items.length
+      ? items.map((it, i) => {
+          const name = ((it.text || '').match(/【(.+?)】/) || [])[1] || '';
+          const t = it.text || '';
+          let level, tag, label;
+          if (/建议立即联系/.test(t)) { level = 'urgent'; tag = 'tag-danger'; label = '紧急'; }
+          else if (/主动推送/.test(t)) { level = 'important'; tag = 'tag-warning'; label = '重要'; }
+          else { level = 'follow'; tag = 'tag-success'; label = '跟进'; }
+          const dotColor = { urgent: 'var(--danger)', important: 'var(--yellow)', follow: 'var(--green)' }[level];
+          const href = it.key ? './user-detail.html?key=' + encodeURIComponent(it.key) : './users.html?tab=all';
+          return `<a class="action-card ${level}" style="text-decoration:none;display:flex;" href="${href}">
+            <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};border:2px solid var(--stroke);flex-shrink:0;margin-top:6px;"></div>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                <span style="font-size:14px;font-weight:800;color:var(--fg);">${name ? '联系 ' + esc(name) : '查看工作台'}</span>
+                <span class="tag ${tag}" style="font-size:11px;padding:2px 8px;">${label}</span>
+              </div>
+              <div style="font-size:12px;color:var(--fg-2);">${esc(t.replace(/【.+?】/g, ''))}</div>
+            </div>
+          </a>`;
+        }).join('')
+      : '<div class="empty">今日暂无重点行动建议 🎈</div>';
+
+    // 今日重点表
+    document.getElementById('hotBody').innerHTML = hotList.length
+      ? hotList.map(u => `
+        <tr class="row-click" onclick="goDetail('${encodeURIComponent(u.key)}')">
+          <td><div style="display:flex;align-items:center;gap:10px;">
+            <div class="user-row-avatar" style="background:${avBg(u.displayName)};">${esc((u.displayName || '?')[0])}</div>
+            <div><div style="font-weight:800;">${esc(u.displayName)}</div><div class="mono">${esc(u.aid || '—')} · ${u.behaviorCount || 0} 次行为</div></div>
+          </div></td>
+          <td><span class="score-pill">${u.priority != null ? Math.round(u.priority) : '—'}</span></td>
+          <td><span class="accel-pill">×${u.momentum != null ? u.momentum : '—'}</span></td>
+          <td>${statusTag(u)}</td>
+          <td><div style="display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();goDetail('${encodeURIComponent(u.key)}')">详情</button>
+            <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();openFu('${encodeURIComponent(u.key)}','${esc(u.displayName)}')">跟进</button>
+          </div></td>
+        </tr>`).join('')
+      : '<tr><td colspan="5"><div class="empty">「今日重点」暂无用户，最近 48 小时无高意向行为</div></td></tr>';
+
+    // 连带销售推荐
+    document.getElementById('crossTotal').textContent = fmtMoney(summary.crosssellTotal);
+    document.getElementById('crossGrid').innerHTML = crossList.length
+      ? crossList.map(u => `
+        <div class="upsell-card" onclick="goDetail('${encodeURIComponent(u.key)}')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div class="user-row-avatar" style="background:${avBg(u.displayName)};">${esc((u.displayName || '?')[0])}</div>
+            <div>
+              <div style="font-weight:800;font-size:14px;">${esc(u.displayName)}</div>
+              <div class="mono">${esc(u.aid || '—')}</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+              <div style="font-size:20px;font-weight:800;color:var(--green-deep);">${fmtMoney(u.crosssellAmount)}</div>
+              <div style="font-size:11px;color:var(--fg-3);">潜在金额</div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;border:2px solid var(--divider);padding:10px 12px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:var(--fg-2);margin-bottom:6px;">连带原因 · 评分 ${u.crosssellScore}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;">${(u.crosssellReasons || []).map(r => '<span class="tag tag-pink" style="font-size:11px;">' + esc(r) + '</span>').join('') || '<span class="tag tag-muted" style="font-size:11px;">组合推荐</span>'}</div>
+          </div>
+          <button class="btn btn-primary btn-sm w-100" style="justify-content:center;" onclick="event.stopPropagation();openFu('${encodeURIComponent(u.key)}','${esc(u.displayName)}')">立即跟进 🎯</button>
+        </div>`).join('')
+      : '<div class="empty">暂无连带销售机会</div>';
+  } catch (e) {
+    console.error(e);
+    document.getElementById('actionList').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
