@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户行为日志 — airU 销售工作台</title>
+<link rel="stylesheet" href="./shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  .filter-card { margin-bottom: 16px; }
+  .filter-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-label { font-size: 11px; color: var(--fg-weak); letter-spacing: 0.3px; }
+  .quick-btns { display: flex; gap: 6px; }
+  .quick-btn {
+    font-size: 12px; padding: 6px 12px; border-radius: 4px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    color: var(--fg-muted); cursor: pointer; transition: all 0.2s; font-family: var(--font);
+  }
+  .quick-btn.active { background: var(--gold-grad); color: #4A3A0F; border-color: transparent; font-weight: 600; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .trend-wrap { display: flex; align-items: flex-end; gap: 2px; height: 60px; margin-top: 8px; }
+  .trend-bar { flex: 1; background: var(--gold-grad); opacity: 0.75; border-radius: 2px 2px 0 0; min-height: 1px; transition: opacity 0.2s; }
+  .trend-bar:hover { opacity: 1; }
+  .td-id { color: var(--fg-weak); font-family: monospace; font-size: 12px; }
+  .td-time { font-family: monospace; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+  .ev-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+  .ev-td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-muted); }
+  .u-td { font-family: monospace; font-size: 12px; }
+  @media (max-width: 768px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .m-hide { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="./dashboard.html">
+      <div class="logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z"/></svg>
+      </div>
+      <div class="logo-text"><span class="logo-name">airU</span><span class="logo-sub">销售工作台</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">工作台</div>
+      <a href="./dashboard.html" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span>今日概览</span>
+      </a>
+      <a href="./users.html" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>高意向用户</span>
+        <span class="nav-badge" id="navHotCnt">-</span>
+      </a>
+      <a href="./behavior.html" class="nav-item active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>行为日志</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">张</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name">张店长</div><div class="sidebar-user-role">门店管理员</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <h1 class="topbar-title">用户行为日志</h1>
+      <div class="topbar-actions">
+        <div class="topbar-date" id="nowText">-</div>
+        <button class="btn btn-outline btn-sm" onclick="load(1)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+          刷新
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- 统计 -->
+      <div class="stat-row">
+        <div class="stat-card" style="cursor:default;"><div class="stat-label">📊 日志总量</div><div class="stat-value plain" id="stTotal">—</div><div class="stat-sub">累计上报记录</div></div>
+        <div class="stat-card" style="cursor:default;"><div class="stat-label">👥 独立访客</div><div class="stat-value plain" id="stUv">—</div><div class="stat-sub">按 AID 去重</div></div>
+        <div class="stat-card" style="cursor:default;"><div class="stat-label">🖱️ PV 次数</div><div class="stat-value plain" id="stPv">—</div><div class="stat-sub">页面浏览量</div></div>
+        <div class="stat-card" style="cursor:default;"><div class="stat-label">🏆 TOP 事件</div><div class="stat-value plain" style="font-size:20px;" id="stTopEv">—</div><div class="stat-sub" id="stTopEvCount"></div></div>
+      </div>
+
+      <!-- 筛选 -->
+      <div class="card filter-card">
+        <div class="card-body">
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label">时间快捷</span>
+              <div class="quick-btns" id="quickBtns">
+                <button class="quick-btn" data-h="1">近1小时</button>
+                <button class="quick-btn" data-h="24">近24小时</button>
+                <button class="quick-btn" data-h="168">近7天</button>
+                <button class="quick-btn active" data-h="">全部</button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">开始时间</span>
+              <input class="form-input" type="datetime-local" id="startTime">
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">结束时间</span>
+              <input class="form-input" type="datetime-local" id="endTime">
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">事件类型</span>
+              <select class="form-select" id="evSelect" style="min-width:150px;"><option value="">全部事件</option></select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">AID（访客ID）</span>
+              <input class="form-input" id="aidInput" placeholder="如 990a344b" style="width:130px;">
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">UID</span>
+              <input class="form-input" id="uidInput" placeholder="可选" style="width:120px;">
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">URL 关键词</span>
+              <input class="form-input" id="urlInput" placeholder="页面包含" style="width:150px;">
+            </div>
+            <div class="flex gap-2" style="align-items:flex-end;">
+              <button class="btn btn-primary" onclick="load(1)">查询</button>
+              <button class="btn btn-outline" onclick="resetFilter()">重置</button>
+              <button class="btn btn-outline" onclick="exportCSV()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                导出CSV
+              </button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--fg-weak);margin-top:8px;" id="filterDesc"></div>
+        </div>
+      </div>
+
+      <!-- 事件趋势 -->
+      <div class="card filter-card">
+        <div class="card-header"><div class="card-title">📈 事件趋势（最近 48 小时 · 每小时）</div><span class="text-weak fs-12">随筛选条件更新</span></div>
+        <div class="card-body"><div class="trend-wrap" id="trendWrap"></div></div>
+      </div>
+
+      <!-- 表格 -->
+      <div class="card">
+        <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>时间</th><th>AID</th><th>UID</th><th>事件</th>
+              <th>事件详情</th><th class="m-hide">页面URL</th><th class="m-hide">来源</th>
+              <th class="m-hide">屏幕</th><th style="text-align:right;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="10" class="loading">加载中…</td></tr></tbody>
+        </table>
+        </div>
+        <div class="card-body" style="padding-top:0;">
+          <div class="pagination">
+            <div class="page-info" id="pageInfo">-</div>
+            <div class="page-btns" id="pageBtns"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- 详情 Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="width:600px;">
+    <div class="modal-header">
+      <div class="modal-title">📄 日志详情</div>
+      <button class="modal-close" onclick="document.getElementById('detailModal').classList.remove('open')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="detailBody" style="font-size:13px;line-height:1.9;">-</div>
+  </div>
+</div>
+
+<script>
+const PAGE = 20;
+const EV_MAP = {
+  'page_view':'页面浏览','item_view':'浏览商品','item_click':'点击商品','add_to_cart':'加购','collect':'收藏','share':'分享',
+  'submit_order':'提交订单','pay_success':'支付成功','stay_duration':'停留','search':'搜索','user_login':'登录','form_submit':'提交表单',
+  'click_element':'点击元素','click_nav':'点击导航','tab_switch':'切换Tab','click_button':'点击按钮','btn_click_tryon':'点击AI试穿',
+  'btn_click_upload':'上传照片','tryon_complete':'试穿完成','tryon_download':'下载试穿','outfit_generate':'生成穿搭',
+  'btn_click_favorite':'收藏','btn_click_share':'分享','page_hide':'离开页面'
+};
+function evLabel(e){ return EV_MAP[e] || e; }
+function evClass(e){
+  const p = /(pay|order|buy|tryon|outfit|favorite|collect|share|add)/i.test(e) ? 'badge-gold' : /(view|visit|click|nav|tab|button|search)/i.test(e) ? 'badge-info' : 'badge-muted';
+  return p;
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDT(ts){ const d = new Date(ts); const p = x => String(x).padStart(2,'0'); return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()); }
+function shortUrl(u){ if (!u) return '—'; return u.replace(/^https?:\/\//,'').slice(0,50); }
+setInterval(() => {
+  const d = new Date(); const p = x => String(x).padStart(2,'0');
+  document.getElementById('nowText').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}, 1000);
+let curPage = 1;
+
+// 时间快捷
+document.querySelectorAll('#quickBtns .quick-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#quickBtns .quick-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    const h = Number(b.dataset.h);
+    const end = new Date(), start = new Date(end.getTime() - h * 3600 * 1000);
+    const p2 = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + 'T' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    if (h) { document.getElementById('startTime').value = p2(start); document.getElementById('endTime').value = p2(end); }
+    else { document.getElementById('startTime').value = ''; document.getElementById('endTime').value = ''; }
+    load(1);
+  });
+});
+
+async function loadEvents() {
+  try {
+    const j = await fetch('/api/behavior-log/events').then(r => r.json());
+    const evs = (j.data && j.data.events) || j.events || [];
+    const sel = document.getElementById('evSelect');
+    sel.innerHTML = '<option value="">全部事件</option>' + evs.map(e => '<option value="' + esc(e) + '">' + esc(evLabel(e)) + '（' + esc(e) + '）</option>').join('');
+  } catch (e) {}
+}
+
+function buildParams(page){
+  const p = new URLSearchParams({ page, size: PAGE });
+  const st = document.getElementById('startTime').value, et = document.getElementById('endTime').value;
+  if (st) p.set('startTime', new Date(st).getTime());
+  if (et) p.set('endTime', new Date(et).getTime());
+  const ev = document.getElementById('evSelect').value; if (ev) p.set('event', ev);
+  const aid = document.getElementById('aidInput').value.trim(); if (aid) p.set('aid', aid);
+  const uid = document.getElementById('uidInput').value.trim(); if (uid) p.set('uid', uid);
+  const url = document.getElementById('urlInput').value.trim(); if (url) p.set('url', url);
+  return p;
+}
+
+function resetFilter(){
+  document.getElementById('quickBtns').querySelectorAll('.quick-btn').forEach(x => x.classList.toggle('active', x.dataset.h === ''));
+  document.getElementById('startTime').value = ''; document.getElementById('endTime').value = '';
+  document.getElementById('evSelect').value = ''; document.getElementById('aidInput').value = '';
+  document.getElementById('uidInput').value = ''; document.getElementById('urlInput').value = '';
+  load(1);
+}
+
+async function load(page){
+  if (page) curPage = page;
+  const p = buildParams(curPage);
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '<tr><td colspan="10"><div class="loading"><span class="spinner"></span>加载中…</div></td></tr>';
+  try {
+    const j = await fetch('/api/behavior-log/list?' + p).then(r => r.json());
+    const d = j.data || { list: [], total: 0 };
+    const list = d.list || [], total = d.total || 0, pages = Math.max(1, Math.ceil(total / PAGE));
+    const stats = d.stats || {};
+
+    document.getElementById('stTotal').textContent = Number(stats.total || total).toLocaleString();
+    document.getElementById('stUv').textContent = stats.uniqueUsers != null ? stats.uniqueUsers : '—';
+    document.getElementById('stPv').textContent = stats.pvCount != null ? stats.pvCount.toLocaleString() : '—';
+    const top = (stats.topEvents || [])[0];
+    document.getElementById('stTopEv').textContent = top ? evLabel(top.event) : '—';
+    document.getElementById('stTopEvCount').textContent = top ? top.count + ' 次' : '';
+
+    // 趋势（最近 48 桶）
+    const trend = d.trend || [];
+    const last48 = trend.slice(-48);
+    const maxC = Math.max(1, ...last48.map(t => t.count));
+    document.getElementById('trendWrap').innerHTML = last48.map(t => {
+      const h = Math.max(4, Math.round((t.count / maxC) * 56));
+      return '<div class="trend-bar" style="height:' + h + 'px;" title="' + fmtDT(t.hourBucket) + ' · ' + t.count + ' 次"></div>';
+    }).join('') || '<div class="empty" style="width:100%;">暂无数据</div>';
+
+    // 列表
+    if (!list.length) tb.innerHTML = '<tr><td colspan="10"><div class="empty">没有符合条件的日志</div></td></tr>';
+    else tb.innerHTML = list.map(r => `
+      <tr class="row-click" onclick="showDetail(${r.id})">
+        <td class="td-id">#${r.id}</td>
+        <td class="td-time">${fmtDT(r.timestamp)}</td>
+        <td class="u-td">${esc(r.aid || '—')}</td>
+        <td class="u-td">${esc(r.uid || '—')}</td>
+        <td><span class="ev-tag ${evClass(r.event)}">${esc(evLabel(r.event))}</span></td>
+        <td class="ev-td" title="${esc(r.eventMsg || '')}">${esc(r.eventMsg || '—')}</td>
+        <td class="ev-td m-hide" title="${esc(r.url || '')}">${esc(shortUrl(r.url))}</td>
+        <td class="ev-td m-hide" title="${esc(r.referrer || '')}">${esc(shortUrl(r.referrer))}</td>
+        <td class="td-id m-hide">${esc(r.screen || '—')}</td>
+        <td style="text-align:right;"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showDetail(${r.id})">详情</button></td>
+      </tr>`).join('');
+
+    document.getElementById('pageInfo').textContent = '共 ' + total.toLocaleString() + ' 条 · 第 ' + curPage + '/' + pages + ' 页';
+    let btns = '<button class="page-btn" onclick="load(' + (curPage-1) + ')" ' + (curPage<=1?'disabled':'') + '>‹</button>';
+    for (let i = 1; i <= pages; i++) {
+      if (pages > 9 && i > 1 && i < pages && Math.abs(i - curPage) > 2) { continue; }
+      btns += '<button class="page-btn ' + (i===curPage?'active':'') + '" onclick="load(' + i + ')">' + i + '</button>';
+    }
+    btns += '<button class="page-btn" onclick="load(' + (curPage+1) + ')" ' + (curPage>=pages?'disabled':'') + '>›</button>';
+    document.getElementById('pageBtns').innerHTML = btns;
+    document.getElementById('filterDesc').textContent = '当前筛选条件：' + (Array.from(p.keys()).filter(k => k !== 'page' && k !== 'size').join(' + ') || '无') + ' ｜ 数据源：track.db';
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="10"><div class="empty">加载失败：' + esc(e.message) + '</div></td></tr>';
+  }
+}
+
+async function showDetail(id) {
+  document.getElementById('detailBody').innerHTML = '<div class="loading"><span class="spinner"></span>加载中…</div>';
+  document.getElementById('detailModal').classList.add('open');
+  try {
+    const j = await fetch('/api/behavior-log/' + id).then(r => r.json());
+    if (j.code !== 0) throw new Error(j.msg || '记录不存在');
+    const d = j.data || {};
+    let extraHtml = '';
+    try { const ex = JSON.parse(d.extra || '{}'); extraHtml = Object.entries(ex).map(([k,v]) => '<div><span class="text-gold fw-600">' + esc(k) + '</span>：' + esc(typeof v === 'object' ? JSON.stringify(v) : v) + '</div>').join(''); }
+    catch(e) { extraHtml = '<div>' + esc(d.extra || '—') + '</div>'; }
+    const ua = d.userAgent || '';
+    const device = /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : /Android/i.test(ua) ? 'Android' : 'PC';
+    const browser = ((ua.match(/(Chrome|Safari|Firefox|Edge|MicroMessenger)\/?[\d.]*/)) || [])[0] || '未知';
+    document.getElementById('detailBody').innerHTML = `
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div><div class="text-weak fs-12">记录 ID</div><div class="fw-600">#${d.id}</div></div>
+        <div><div class="text-weak fs-12">时间</div><div class="fw-600">${fmtDT(d.timestamp)}</div></div>
+        <div><div class="text-weak fs-12">AID（访客）</div><div class="fw-600" style="font-family:monospace;">${esc(d.aid || '—')}</div></div>
+        <div><div class="text-weak fs-12">UID（用户）</div><div class="fw-600" style="font-family:monospace;">${esc(d.uid || '—')}</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="text-weak fs-12">事件</div>
+      <div style="margin-bottom:10px;"><span class="ev-tag ${evClass(d.event)}">${esc(evLabel(d.event))}</span> <span class="text-muted">${esc(d.eventMsg || '')}</span></div>
+      <div class="divider"></div>
+      <div class="text-weak fs-12">页面 / 来源</div>
+      <div style="margin-bottom:10px;">
+        <div><span class="text-gold fw-600">URL</span>：${esc(d.url || '—')}</div>
+        <div><span class="text-gold fw-600">来源</span>：${esc(d.referrer || '—')}</div>
+        <div><span class="text-gold fw-600">屏幕</span>：${esc(d.screen || '—')}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="text-weak fs-12">设备 / 扩展数据</div>
+      <div>
+        <div><span class="text-gold fw-600">设备</span>：${device} · ${browser}</div>
+        ${extraHtml}
+      </div>`;
+  } catch (e) {
+    document.getElementById('detailBody').innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
+  }
+}
+
+async function exportCSV() {
+  try {
+    const p = buildParams(1); p.set('size', 1000); p.set('page', 1);
+    const j = await fetch('/api/behavior-log/list?' + p).then(r => r.json());
+    const list = (j.data && j.data.list) || [];
+    if (!list.length) { alert('没有可导出的数据'); return; }
+    const head = 'ID,时间,AID,UID,事件,事件详情,URL,来源,屏幕';
+    const rows = list.map(r => [r.id, fmtDT(r.timestamp), r.aid || '', r.uid || '', evLabel(r.event), (r.eventMsg || '').replace(/,/g,'，'), r.url || '', r.referrer || '', r.screen || ''].join(','));
+    const blob = new Blob(['\ufeff' + head + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '行为日志_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch (e) { alert('导出失败：' + e.message); }
+}
+
+document.getElementById('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') e.currentTarget.classList.remove('open'); });
+loadEvents();
+load(1);
+</script>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户详情 — airU 销售工作台</title>
+<link rel="stylesheet" href="./shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  .detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
+  .user-header { display: flex; align-items: center; gap: 18px; padding: 24px; }
+  .big-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold-grad); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; color: #4A3A0F; }
+  .user-header-main { flex: 1; }
+  .user-header-name { font-size: 22px; font-weight: 700; color: var(--fg); display: flex; align-items: center; gap: 10px; }
+  .user-meta { font-size: 12px; color: var(--fg-weak); margin-top: 4px; font-family: monospace; }
+  .user-header-stats { display: flex; gap: 28px; border-left: 1px solid var(--divider); padding-left: 24px; }
+  .uhs-item { text-align: center; }
+  .uhs-value { font-size: 22px; font-weight: 700; }
+  .uhs-label { font-size: 11px; color: var(--fg-weak); margin-top: 2px; }
+  .detail-section { margin-bottom: 16px; }
+  .panel-title { font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .score-pts { font-family: monospace; font-size: 13px; color: var(--fg); font-weight: 600; min-width: 60px; text-align: right; }
+  .score-label { font-size: 13px; color: var(--fg-muted); flex: 1; }
+  .tl-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .tl-item:last-child { border-bottom: none; }
+  .tl-time { width: 96px; flex-shrink: 0; font-size: 11px; color: var(--fg-weak); font-family: monospace; }
+  .tl-main { flex: 1; min-width: 0; }
+  .tl-event { font-size: 13px; color: var(--fg); }
+  .tl-event .tag { margin-right: 6px; }
+  .tl-desc { font-size: 11px; color: var(--fg-weak); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .script-item { background: rgba(200,169,81,0.05); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; color: var(--fg-muted); line-height: 1.7; }
+  .script-item .si-label { display: block; font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
+  .fu-item { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .fu-item:last-child { border-bottom: none; }
+  .fu-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .fu-note { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
+  .fu-meta { font-size: 11px; color: var(--fg-weak); margin-top: 2px; }
+  .ev-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+  .ev-row .ev-name { color: var(--fg-muted); }
+  .ev-row .ev-val { color: var(--fg); font-weight: 600; font-family: monospace; }
+  .bar-wrap { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin: 4px 0; }
+  .bar-fill { height: 100%; background: var(--gold-grad); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="./dashboard.html">
+      <div class="logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z"/></svg>
+      </div>
+      <div class="logo-text"><span class="logo-name">airU</span><span class="logo-sub">销售工作台</span></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">工作台</div>
+      <a href="./dashboard.html" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span>今日概览</span>
+      </a>
+      <a href="./users.html" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>高意向用户</span>
+        <span class="nav-badge" id="navHotCnt">-</span>
+      </a>
+      <a href="./behavior.html" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>行为日志</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">张</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name">张店长</div><div class="sidebar-user-role">门店管理员</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <h1 class="topbar-title" id="pageTitle">用户详情</h1>
+      <div class="topbar-actions">
+        <a class="btn btn-outline btn-sm" href="./users.html">← 返回列表</a>
+        <button class="btn btn-primary btn-sm" onclick="openFollowModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+          预约跟进
+        </button>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      <div class="loading" style="padding:80px;"><span class="spinner"></span>正在加载用户画像…</div>
+    </main>
+  </div>
+</div>
+
+<!-- 预约跟进 Modal -->
+<div class="modal-overlay" id="fuModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📌 预约跟进</div>
+      <button class="modal-close" onclick="document.getElementById('fuModal').classList.remove('open')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">跟进对象</label>
+        <input class="form-input" id="fuUser" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label">负责跟进人</label>
+        <select class="form-select" id="fuOwner">
+          <option value="">请选择</option>
+          <option>小林</option>
+          <option>小付</option>
+          <option>小陈</option>
+          <option>小葛</option>
+          <option>林老师</option>
+          <option>赵老师</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">跟进时间</label>
+        <select class="form-select" id="fuPlanTime">
+          <option value="">请选择</option>
+          <option>今天下午</option>
+          <option>明天上午</option>
+          <option>明天下午</option>
+          <option>后天</option>
+          <option>本周内</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">跟进备注</label>
+        <textarea class="form-textarea" id="fuNote" placeholder="记录本次跟进的要点、用户兴趣等…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('fuModal').classList.remove('open')">取消</button>
+      <button class="btn btn-primary" onclick="submitFollow()">确认预约</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let U = null;
+const EV_MAP = {
+  'page_view':'页面浏览','item_view':'浏览商品','item_click':'点击商品','add_to_cart':'加购','collect':'收藏','share':'分享',
+  'submit_order':'提交订单','pay_success':'支付成功','stay_duration':'停留','search':'搜索','user_login':'登录','form_submit':'提交表单',
+  'click_element':'点击元素','click_nav':'点击导航','tab_switch':'切换Tab','click_button':'点击按钮','btn_click_tryon':'点击AI试穿',
+  'btn_click_upload':'上传照片','tryon_complete':'试穿完成','tryon_download':'下载试穿','outfit_generate':'生成穿搭',
+  'btn_click_favorite':'收藏','btn_click_share':'分享','page_hide':'离开页面'
+};
+function evLabel(e){ return EV_MAP[e] || e; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n){ return '¥' + Number(n || 0).toLocaleString(); }
+function pillScore(p){
+  if (p >= 100) return '<span class="badge badge-danger">🔥 极高</span>';
+  if (p >= 60)  return '<span class="badge badge-warning">高</span>';
+  if (p >= 30)  return '<span class="badge badge-info">中</span>';
+  return '<span class="badge badge-muted">低</span>';
+}
+function evClass(e){ return /(pay|order|buy|tryon|outfit|favorite|collect|share|add)/i.test(e) ? 'badge-gold' : /(view|click|nav|tab|button|search)/i.test(e) ? 'badge-info' : 'badge-muted'; }
+
+async function init() {
+  const key = new URLSearchParams(location.search).get('key');
+  if (!key) { document.getElementById('content').innerHTML = '<div class="empty">缺少 key 参数，请从用户列表进入</div>'; return; }
+  try {
+    const j = await fetch('/api/intent/user?key=' + encodeURIComponent(key)).then(r => r.json());
+    if (j.code !== 0) throw new Error(j.msg || '用户不存在');
+    U = j.data;
+    render();
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function render() {
+  const u = U;
+  document.getElementById('pageTitle').textContent = u.displayName + ' · 用户工作台';
+  document.title = u.displayName + ' — airU 销售工作台';
+
+  const timeline = (u.timeline || []).slice(0, 40);
+  const details = (u.scoreDetails || []).slice(0, 15).sort((a,b) => Math.abs(b.point || 0) - Math.abs(a.point || 0));
+  const fus = u.followUps || [];
+  const evCount = {};
+  (u.timeline || []).forEach(t => { const e = t.event; evCount[e] = (evCount[e] || 0) + 1; });
+  const evTop = Object.entries(evCount).sort((a,b) => b[1]-a[1]).slice(0,8);
+
+  // 建议话术（本地规则）
+  const scripts = [];
+  if (u.isHeatingUp) scripts.push({ label: '⚡ 快速升温', text: u.displayName + ' 最近行为热度上升，建议今日内主动联系，抓住即时兴趣窗口，优先推荐当季热门款。' });
+  if (u.crosssellScore > 0 && u.crosssellReasons && u.crosssellReasons.length) scripts.push({ label: '🛍️ 连带机会', text: '检测到潜在连带需求（' + (u.crosssellReasons || []).join('、') + '），可在沟通中顺势做整套搭配推荐。' });
+  if (u.collectedLooks > 0) scripts.push({ label: '✨ 收藏穿搭', text: u.displayName + ' 收藏了 ' + u.collectedLooks + ' 套穿搭灵感，可以询问是否想试穿同款，引导到店/AI 试穿。' });
+  if (u.viewedSkus > 0) scripts.push({ label: '🧥 浏览商品', text: '近期浏览了 ' + u.viewedSkus + ' 件商品，可主动询问偏好尺码与风格，做精准推荐。' });
+  if (u.openDays >= 3) scripts.push({ label: '👋 老客维护', text: '这是连续第 ' + u.openDays + ' 天打开的老客，可发一条轻量问候 + 新品预告，维持到店频率。' });
+  scripts.push({ label: '💬 标准开场', text: u.displayName + ' 您好，我是 airU 形象顾问～看到您对穿搭很感兴趣，最近有什么场合需要帮忙搭配吗？' });
+
+  document.getElementById('content').innerHTML = `
+  <!-- 用户头部 -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="user-header">
+      <div class="big-avatar">${esc((u.displayName || '?')[0])}</div>
+      <div class="user-header-main">
+        <div class="user-header-name">${esc(u.displayName)}
+          ${u.isHeatingUp ? '<span class="badge badge-danger">⚡ 升温中</span>' : ''}
+          ${u.crosssellScore > 0 ? '<span class="badge badge-gold">🛍️ 连带机会</span>' : ''}
+        </div>
+        <div class="user-meta">${esc(u.aid || '—')}${u.uid ? ' · ' + esc(u.uid) : ''} · ${u.behaviorCount || 0} 次行为 · 活跃 ${u.openDays || 0} 天 · 上次活跃 ${esc(u.lastActive ? relTime(u.lastActive) : '—')}</div>
+      </div>
+      <div class="user-header-stats">
+        <div class="uhs-item"><div class="uhs-value text-gold">${u.score != null ? Math.round(u.score) : '—'}</div><div class="uhs-label">意向分</div></div>
+        <div class="uhs-item"><div class="uhs-value text-gold">${u.priority != null ? Math.round(u.priority) : '—'}</div><div class="uhs-label">优先级</div></div>
+        <div class="uhs-item"><div class="uhs-value text-gold">×${u.momentum != null ? u.momentum : '—'}</div><div class="uhs-label">加速</div></div>
+        <div class="uhs-item"><div class="uhs-value" style="color:var(--warning);">${u.crosssellAmount ? fmtMoney(u.crosssellAmount) : '—'}</div><div class="uhs-label">连带金额</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-layout">
+    <!-- 左栏 -->
+    <div>
+      <!-- 行为时间线 -->
+      <div class="card detail-section">
+        <div class="card-header"><div class="card-title">🕐 最近行为时间线</div><span class="text-weak fs-12">最近 ${timeline.length} 条</span></div>
+        <div class="card-body" style="padding:4px 20px;">
+          ${timeline.length ? timeline.map(t => `
+            <div class="tl-item">
+              <div class="tl-time">${esc(t.formattedTime || '')}</div>
+              <div class="tl-main">
+                <div class="tl-event"><span class="ev-tag ${evClass(t.event)}" style="font-size:11px;padding:1px 6px;">${esc(evLabel(t.event))}</span> <span class="text-muted">${esc(t.eventMsg || '')}</span></div>
+                <div class="tl-desc">${esc(t.url || '')}</div>
+              </div>
+            </div>`).join('')
+          : '<div class="empty">暂无行为记录</div>'}
+        </div>
+      </div>
+
+      <!-- 评分明细 -->
+      <div class="card detail-section">
+        <div class="card-header"><div class="card-title">🧮 意向评分明细</div><span class="text-weak fs-12">按贡献排序 · 展示前 15</span></div>
+        <div class="card-body">
+          <div class="score-row" style="margin-bottom:12px;">
+            <div style="flex:1;font-size:13px;color:var(--fg-muted);">综合意向分 ${u.score}</div>
+            <div style="flex:1;font-size:13px;color:var(--fg-muted);">今日意向分 ${u.todayScore}</div>
+            ${pillScore(u.priority)}
+          </div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(100, u.priority || 0)}%"></div></div>
+          <div style="height:10px;"></div>
+          ${details.length ? details.map(d => `
+            <div class="score-row">
+              <span class="score-label">${esc(d.label || d.event)}${d.event === '__recent' ? '' : ' <span class="text-weak">(' + esc(d.event) + ' ×' + (d.weight || 1) + ')</span>'}</span>
+              <span class="score-pts" style="color:${d.point >= 0 ? 'var(--gold)' : 'var(--danger)'};">${d.point >= 0 ? '+' : ''}${Math.round(d.point * 10) / 10}</span>
+            </div>`).join('')
+          : '<div class="empty">暂无评分明细</div>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏 -->
+    <div>
+      <!-- 建议话术 -->
+      <div class="card detail-section">
+        <div class="card-header"><div class="card-title">💬 建议话术</div></div>
+        <div class="card-body">
+          ${scripts.slice(0, 3).map(s => '<div class="script-item"><span class="si-label">' + s.label + '</span>' + esc(s.text) + '</div>').join('')}
+        </div>
+      </div>
+
+      <!-- 行为事件分布 -->
+      <div class="card detail-section">
+        <div class="card-header"><div class="card-title">📊 事件分布</div></div>
+        <div class="card-body">
+          ${evTop.length ? evTop.map(([e, n]) => '<div class="ev-row"><span class="ev-name">' + esc(evLabel(e)) + '</span><span class="ev-val">' + n + '</span></div>').join('')
+          : '<div class="empty">暂无事件</div>'}
+        </div>
+      </div>
+
+      <!-- 跟进记录 -->
+      <div class="card detail-section">
+        <div class="card-header">
+          <div class="card-title">📌 跟进记录</div>
+          <button class="btn btn-primary btn-sm" onclick="openFollowModal()">＋ 新增预约</button>
+        </div>
+        <div class="card-body" style="padding-top:8px;padding-bottom:8px;" id="fuList">
+          ${renderFu(fus)}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // 绑定跟进状态按钮
+  document.querySelectorAll('[data-fuact]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id, act = btn.dataset.fuact;
+      const st = { done: '完成跟进', canceled: '取消预约' }[act];
+      if (!confirm('确认要「' + st + '」这条预约吗？')) return;
+      try {
+        const j = await fetch('/api/follow-ups/' + id + '/status', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: act })
+        }).then(r => r.json());
+        if (j.code !== 0) throw new Error(j.msg);
+        const ud = await fetch('/api/intent/user?key=' + encodeURIComponent(U.key)).then(r => r.json());
+        U.followUps = (ud.data && ud.data.followUps) || [];
+        document.getElementById('fuList').innerHTML = renderFu(U.followUps);
+      } catch (e) { alert('操作失败：' + e.message); }
+    });
+  });
+}
+
+function relTime(ts){
+  const diff = Date.now() - ts;
+  if (diff < 60e3) return '刚刚';
+  if (diff < 3600e3) return Math.floor(diff / 60e3) + ' 分钟前';
+  if (diff < 86400e3) return Math.floor(diff / 3600e3) + ' 小时前';
+  return Math.floor(diff / 86400e3) + ' 天前';
+}
+
+function renderFu(fus) {
+  if (!fus || !fus.length) return '<div class="empty">暂无跟进记录</div>';
+  const stMap = { pending: ['badge-warning', '待跟进'], done: ['badge-success', '已跟进'], canceled: ['badge-muted', '已取消'] };
+  return fus.map(f => {
+    const [cls, label] = stMap[f.status] || ['badge-muted', f.status];
+    return `<div class="fu-item">
+      <div class="fu-top">
+        <span class="badge ${cls}">${label}</span>
+        <span class="text-weak fs-12">${esc(f.plan_time || '未设定时间')}</span>
+      </div>
+      ${f.note ? '<div class="fu-note">' + esc(f.note) + '</div>' : ''}
+      <div class="fu-meta">负责人：${esc(f.owner || '—')} · 创建于 ${esc(new Date(f.created_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}</div>
+      <div class="mt-4 flex gap-2">
+        ${f.status === 'pending' ? `
+          <button class="btn btn-primary btn-sm" data-fuact="done" data-id="${f.id}">完成</button>
+          <button class="btn btn-outline btn-sm" data-fuact="canceled" data-id="${f.id}">取消</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openFollowModal() {
+  if (!U) return;
+  document.getElementById('fuUser').value = U.displayName + '（' + U.key + '）';
+  document.getElementById('fuOwner').value = '';
+  document.getElementById('fuPlanTime').value = '';
+  document.getElementById('fuNote').value = '';
+  document.getElementById('fuModal').classList.add('open');
+}
+
+async function submitFollow() {
+  if (!U) return;
+  const owner = document.getElementById('fuOwner').value;
+  const planTime = document.getElementById('fuPlanTime').value;
+  const note = document.getElementById('fuNote').value;
+  if (!owner) { alert('请选择负责跟进人'); return; }
+  if (!planTime) { alert('请选择跟进时间'); return; }
+  try {
+    const j = await fetch('/api/follow-ups', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_key: U.key, display_name: U.displayName, plan_time: planTime, note, owner })
+    }).then(r => r.json());
+    if (j.code !== 0) throw new Error(j.msg);
+    document.getElementById('fuModal').classList.remove('open');
+    const ud = await fetch('/api/intent/user?key=' + encodeURIComponent(U.key)).then(r => r.json());
+    U.followUps = (ud.data && ud.data.followUps) || [];
+    document.getElementById('fuList').innerHTML = renderFu(U.followUps);
+  } catch (e) { alert('提交失败：' + e.message); }
+}
+
+document.getElementById('fuModal').addEventListener('click', e => { if (e.target.id === 'fuModal') e.currentTarget.classList.remove('open'); });
+init();
+</script>
+</body>
+</html>

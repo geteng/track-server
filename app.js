@@ -463,6 +463,9 @@ const sendHtml = (res, file, name) => {
   else res.status(404).send(`${name} 文件未找到，请检查 public/${file}`);
 };
 
+// 新版 UI（design1）静态资源：/design1/xxx.html 直接访问
+app.use('/design1', express.static(path.join(__dirname, 'public', 'design1')));
+
 // 根路径：默认进入销售工作台
 app.get('/', (req, res) => res.redirect('/sales'));
 
