@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const intentEngine = require('./intent-engine');
+const dataLevels = require('./data-levels');
 
 const app = express();
 const PORT = 3000;
@@ -40,19 +41,28 @@ db.serialize(() => {
     userAgent   TEXT,
     screen      TEXT,
     eventMsg    TEXT,
+    level       TEXT,
     extra       TEXT
   )`);
-  // 兼容旧表：若缺少 uid / eventMsg 列则自动补加；已存在则不执行，避免重启报错
+  // 兼容旧表：若缺少 uid / eventMsg / level 列则自动补加；补加完成后再建索引 + 回填，避免重启报错
   db.all(`PRAGMA table_info(behavior_log)`, (err, cols) => {
     if (err) return;
     const names = (cols || []).map(c => c.name);
-    if (!names.includes('uid')) db.run(`ALTER TABLE behavior_log ADD COLUMN uid TEXT`);
-    if (!names.includes('eventMsg')) db.run(`ALTER TABLE behavior_log ADD COLUMN eventMsg TEXT`);
+    const tasks = [];
+    if (!names.includes('uid')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN uid TEXT`);
+    if (!names.includes('eventMsg')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN eventMsg TEXT`);
+    if (!names.includes('level')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN level TEXT`);
+    let i = 0;
+    const step = () => {
+      if (i < tasks.length) return db.run(tasks[i++], step);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bl_ts     ON behavior_log(timestamp)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bl_aid    ON behavior_log(aid)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bl_uid    ON behavior_log(uid)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bl_event  ON behavior_log(event)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bl_level  ON behavior_log(level)`, () => backfillLevels());
+    };
+    step();
   });
-  db.run(`CREATE INDEX IF NOT EXISTS idx_bl_ts     ON behavior_log(timestamp)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_bl_aid    ON behavior_log(aid)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_bl_uid    ON behavior_log(uid)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_bl_event  ON behavior_log(event)`);
 
   // 预约跟进任务表（销售工作台）
   db.run(`CREATE TABLE IF NOT EXISTS follow_up (
@@ -73,6 +83,22 @@ db.serialize(() => {
     const names = (cols || []).map(c => c.name);
     if (!names.includes('owner')) db.run(`ALTER TABLE follow_up ADD COLUMN owner TEXT`);
   });
+
+  // 用户授权表（依据《用户行为追踪边界规范》渐进式授权）
+  // L3 兴趣画像需要用户授权后 CA 才可见；授权可设有效期（7 天 / 30 天 / 长期）
+  db.run(`CREATE TABLE IF NOT EXISTS user_consent (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_key    TEXT,
+    scope       TEXT,                 -- 授权范围，如 'L3'
+    granted     INTEGER DEFAULT 0,    -- 1 授权 / 0 拒绝或未授权
+    duration    TEXT,                 -- '7d' / '30d' / 'long'
+    source      TEXT,                 -- 触发来源，如 'collect_look'（收藏后触发的授权）
+    granted_at  INTEGER,
+    expires_at  INTEGER,              -- 到期时间戳，long 为过大值
+    updated_at  INTEGER
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_uc_key   ON user_consent(user_key)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_uc_scope ON user_consent(scope)`);
 });
 
 /* ============ 工具函数 ============ */
@@ -129,6 +155,35 @@ function formatTs(ts) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+// 回填历史数据的层级（旧库升级时使用）
+function backfillLevels() {
+  db.all(`SELECT id, event FROM behavior_log WHERE level IS NULL OR level = ''`, [], (err, rows) => {
+    if (err || !rows || !rows.length) return;
+    const stmt = db.prepare(`UPDATE behavior_log SET level = ? WHERE id = ?`);
+    rows.forEach(r => stmt.run(dataLevels.levelOf(r.event), r.id));
+    stmt.finalize(() => console.log(`🔖 已回填 ${rows.length} 条历史上报的数据层级`));
+  });
+}
+
+// 解析请求角色（Demo 由前端传参；生产环境必须来自登录态，禁止通过参数越权）
+function resolveRole(req, fallback) {
+  const role = (req.query && req.query.role) || (req.body && req.body.role) || fallback || dataLevels.DEFAULT_ROLE;
+  return dataLevels.ROLES[role] ? role : (fallback || dataLevels.DEFAULT_ROLE);
+}
+
+// 按角色裁剪用户数据：CA 不可见被动行为（L1）派生的字段，只保留主动动作与结论
+function sanitizeUserForRole(u, role) {
+  if (dataLevels.roleConfig(role).rawDetail) return u; // 开发者 / 老板娘 可见原始数据
+  const clone = { ...u };
+  clone.viewedSkus = 0;            // 浏览商品数（L1 被动行为）不对 CA 暴露
+  clone.behaviorCount = 0;         // 行为总数含被动行为，CA 不展示
+  clone.scoreDetails = [];         // 评分明细含被动行为，CA 不展示
+  if (Array.isArray(clone.crosssellReasons)) {
+    clone.crosssellReasons = clone.crosssellReasons.filter(r => !/浏览|风格多次/.test(r));
+  }
+  return clone;
+}
+
 /* ============ 基础接口 ============ */
 
 // 健康检查
@@ -136,13 +191,16 @@ app.get('/api/health', (req, res) => {
   res.json({ code: 0, msg: 'ok', service: 'h5-track-server', time: Date.now() });
 });
 
-// 埋点接收
+// 埋点接收（每条上报都必须带「数据权限层级」level，未带则按事件自动推导）
 app.post('/api/track', (req, res) => {
   const data = req.body;
   if (!data || !data.event) {
     return res.status(400).json({ code: -1, msg: '字段缺失: event' });
   }
-  const insertSql = `INSERT INTO behavior_log (aid, uid, event, url, referrer, timestamp, userAgent, screen, eventMsg, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  // 层级：优先使用上报方传入的 level，非法则按事件推导，保证「每个上报都有层级」
+  const level = dataLevels.isValidLevel(data.level) ? data.level : dataLevels.levelOf(data.event);
+
+  const insertSql = `INSERT INTO behavior_log (aid, uid, event, url, referrer, timestamp, userAgent, screen, eventMsg, level, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   const params = [
     data.aid || 'unknown',
     data.uid || '',
@@ -153,13 +211,27 @@ app.post('/api/track', (req, res) => {
     data.userAgent || req.get('User-Agent') || '',
     data.screen || '',
     data.eventMsg || '',
+    level,
     JSON.stringify(data.extra || {})
   ];
   db.run(insertSql, params, (err) => {
     if (err) console.error('❌ 写入失败:', err.message);
-    else console.log(`📝 埋点: aid=${data.aid || 'unknown'} uid=${data.uid || '-'} event=${data.event}`);
+    else console.log(`📝 埋点: aid=${data.aid || 'unknown'} uid=${data.uid || '-'} event=${data.event} level=${level}`);
   });
-  res.status(200).json({ code: 0, msg: 'ok' });
+  res.status(200).json({ code: 0, msg: 'ok', level });
+});
+
+// 数据层级 / 角色定义（供前端渲染权限切换使用）
+app.get('/api/levels', (req, res) => {
+  res.json({
+    code: 0,
+    data: {
+      levels: dataLevels.LEVELS,
+      levelOrder: dataLevels.LEVEL_ORDER,
+      roles: dataLevels.ROLES,
+      defaultRole: dataLevels.DEFAULT_ROLE,
+    },
+  });
 });
 
 // 旧版查询（保留兼容）
@@ -202,11 +274,18 @@ app.get('/api/stats/app', (req, res) => {
 app.get('/api/behavior-log/list', (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const size = Math.min(Math.max(parseInt(req.query.size) || 20, 1), 100);
-  const { startTime, endTime, event, aid, uid, url, referrer } = req.query;
+  const { startTime, endTime, event, aid, uid, url, referrer, level } = req.query;
 
   let where = [];
   let params = [];
 
+  // 数据权限层级过滤：默认「开发者」可见全部层级，其它角色按 allowedLevels 收敛
+  const role = resolveRole(req, 'developer');
+  const allowed = dataLevels.allowedLevelsFor(role);
+  where.push(`level IN (${dataLevels.placeholders(allowed)})`);
+  params.push(...allowed);
+
+  if (level && dataLevels.isValidLevel(level) && allowed.includes(level)) { where.push('level = ?'); params.push(level); }
   if (startTime) { where.push('timestamp >= ?'); params.push(parseInt(startTime)); }
   if (endTime) { where.push('timestamp <= ?'); params.push(parseInt(endTime)); }
   if (event) { where.push('event = ?'); params.push(event); }
@@ -317,6 +396,7 @@ app.get('/api/intent/users', (req, res) => {
   const tab = req.query.tab || 'hot';
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const size = Math.min(Math.max(parseInt(req.query.size) || 20, 1), 100);
+  const role = resolveRole(req, 'ca');
 
   intentEngine.getAllUsers((err, users) => {
     if (err) return res.status(500).json({ code: -1, msg: err.message });
@@ -327,7 +407,7 @@ app.get('/api/intent/users', (req, res) => {
       const fuByUser = {};
       followUps.forEach(f => { fuByUser[f.user_key] = f; });
 
-      let list = users.map(u => ({ ...u, followUp: fuByUser[u.key] || null }));
+      let list = users.map(u => ({ ...sanitizeUserForRole(u, role), followUp: fuByUser[u.key] || null }));
 
       switch (tab) {
         case 'hot':     // 今日重点：今天在升温且 Priority 高
@@ -362,7 +442,7 @@ app.get('/api/intent/users', (req, res) => {
         monthCrossSell: users.reduce((a, u) => a + (u.crosssellAmount || 0), 0),                   // 本月连带金额
       };
 
-      res.json({ code: 0, data: { list: paged, total, page, size, tab, summary } });
+      res.json({ code: 0, data: { list: paged, total, page, size, tab, role, summary } });
     });
   });
 });
@@ -395,14 +475,40 @@ app.get('/api/intent/action-summary', (req, res) => {
 app.get('/api/intent/user', (req, res) => {
   const key = req.query.key || req.query.uid;
   if (!key) return res.status(400).json({ code: -1, msg: '缺少 key 参数' });
+  const role = resolveRole(req, 'ca');
   intentEngine.getUserDetail(key, (err, user) => {
     if (err) return res.status(500).json({ code: -1, msg: err.message });
     if (!user) return res.status(404).json({ code: -1, msg: '未找到该用户行为数据' });
 
     db.all(`SELECT * FROM follow_up WHERE user_key = ? ORDER BY created_at DESC`, [user.key], (err2, fus) => {
       if (err2) return res.status(500).json({ code: -1, msg: err2.message });
-      res.json({ code: 0, data: { ...user, followUps: fus } });
+      // 按角色过滤时间线：CA 仅可见主动动作(L2)，看不到逐条被动浏览(L0/L1)
+      const allowed = dataLevels.allowedLevelsFor(role);
+      const data = sanitizeUserForRole(user, role);
+      if (Array.isArray(data.timeline)) {
+        data.timeline = data.timeline.filter(t => allowed.includes(t.level || dataLevels.levelOf(t.event)));
+      }
+      res.json({ code: 0, data: { ...data, role, followUps: fus } });
     });
+  });
+});
+
+// 数据层级分布（开发者视角：各层级上报量统计）
+app.get('/api/intent/level-stats', (req, res) => {
+  db.all(`SELECT level, COUNT(*) AS count FROM behavior_log GROUP BY level`, [], (err, rows) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    const map = {};
+    rows.forEach(r => { map[r.level || 'L0'] = r.count; });
+    const stats = dataLevels.LEVEL_ORDER.map(code => ({
+      code,
+      name: dataLevels.LEVELS[code].name,
+      desc: dataLevels.LEVELS[code].desc,
+      caVisible: dataLevels.LEVELS[code].caVisible,
+      needConsent: dataLevels.LEVELS[code].needConsent,
+      count: map[code] || 0,
+    }));
+    const total = rows.reduce((a, r) => a + r.count, 0);
+    res.json({ code: 0, data: { total, stats } });
   });
 });
 
@@ -455,6 +561,43 @@ app.delete('/api/follow-ups/:id', (req, res) => {
   });
 });
 
+/* ============ 用户授权（渐进式授权） ============ */
+
+// 查询某用户的 L3 画像授权状态
+app.get('/api/consent', (req, res) => {
+  const userKey = req.query.user_key;
+  if (!userKey) return res.status(400).json({ code: -1, msg: '缺少 user_key' });
+  db.get(`SELECT * FROM user_consent WHERE user_key = ? AND scope = 'L3' ORDER BY updated_at DESC LIMIT 1`, [userKey], (err, row) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    const active = !!(row && row.granted && (!row.expires_at || row.expires_at > Date.now()));
+    res.json({ code: 0, data: { consent: row || null, active } });
+  });
+});
+
+// 创建 / 更新授权（duration: 7d / 30d / long）
+app.post('/api/consent', (req, res) => {
+  const { user_key, granted, duration, source } = req.body || {};
+  if (!user_key) return res.status(400).json({ code: -1, msg: '缺少 user_key' });
+  const now = Date.now();
+  const DAY = 24 * 3600 * 1000;
+  const dur = duration || 'long';
+  const expiresAt = dur === '7d' ? now + 7 * DAY : dur === '30d' ? now + 30 * DAY : now + 100 * 365 * DAY;
+  db.get(`SELECT id FROM user_consent WHERE user_key = ? AND scope = 'L3'`, [user_key], (err, row) => {
+    if (err) return res.status(500).json({ code: -1, msg: err.message });
+    const done = (e2) => {
+      if (e2) return res.status(500).json({ code: -1, msg: e2.message });
+      res.json({ code: 0, msg: 'ok', data: { granted: granted ? 1 : 0, duration: dur, expiresAt } });
+    };
+    if (row) {
+      db.run(`UPDATE user_consent SET granted = ?, duration = ?, source = ?, granted_at = ?, expires_at = ?, updated_at = ? WHERE id = ?`,
+        [granted ? 1 : 0, dur, source || '', now, expiresAt, now, row.id], done);
+    } else {
+      db.run(`INSERT INTO user_consent (user_key, scope, granted, duration, source, granted_at, expires_at, updated_at) VALUES (?, 'L3', ?, ?, ?, ?, ?, ?)`,
+        [user_key, granted ? 1 : 0, dur, source || '', now, expiresAt, now], done);
+    }
+  });
+});
+
 /* ============ 页面 ============ */
 
 const sendHtml = (res, file, name) => {
@@ -498,6 +641,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   行动摘要:     GET  /api/intent/action-summary`);
   console.log(`   用户详情:     GET  /api/intent/user?key=`);
   console.log(`   跟进任务:     GET/POST /api/follow-ups`);
+  console.log(`   层级定义:     GET  /api/levels`);
+  console.log(`   层级分布:     GET  /api/intent/level-stats`);
+  console.log(`   用户授权:     GET/POST /api/consent`);
   console.log(`   Dashboard:    GET  /userBehavior`);
   console.log(`   销售工作台:   GET  /sales`);
   console.log(`   用户列表:     GET  /sales/users`);

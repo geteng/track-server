@@ -4,6 +4,7 @@
  * 用法: node mock_data.js
  */
 const sqlite3 = require('sqlite3').verbose();
+const dataLevels = require('./data-levels');
 const db = new sqlite3.Database('./track.db');
 
 const apps = ['airDemo5', 'airDemo_xi', 'airDemo_cjy', 'airDemo4'];
@@ -104,7 +105,7 @@ db.serialize(() => {
       console.log('已清理旧 mock 数据');
     }
 
-    const insertSql = `INSERT INTO behavior_log (aid, event, url, referrer, timestamp, userAgent, screen, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const insertSql = `INSERT INTO behavior_log (aid, event, url, referrer, timestamp, userAgent, screen, level, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
     let completed = 0;
     const total = records.length;
@@ -112,7 +113,8 @@ db.serialize(() => {
     records.forEach(record => {
       db.run(insertSql, [
         record.aid, record.event, record.url, record.referrer,
-        record.timestamp, record.userAgent, record.screen, record.extra
+        record.timestamp, record.userAgent, record.screen,
+        dataLevels.levelOf(record.event), record.extra
       ], (err) => {
         completed++;
         if (err) {

@@ -713,6 +713,29 @@ document.addEventListener('keydown', (e) => {
 
 // ===== 初始化 =====
 (function init() {
+  // 视角守卫：「行为日志」仅开发者视角可见，非开发者直接拦截（防止手输 URL 绕过）
+  let role = localStorage.getItem('salesRole');
+  if (role !== 'developer' && role !== 'boss' && role !== 'ca') role = 'ca';
+  document.body.setAttribute('data-role', role);
+  if (role !== 'developer') {
+    const nav = document.querySelector('.top-nav');
+    if (nav) nav.style.display = 'none';
+    const container = document.querySelector('.container');
+    if (container) {
+      container.innerHTML =
+        '<div style="max-width:520px;margin:80px auto;text-align:center;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:40px 28px;">' +
+          '<div style="font-size:44px;line-height:1;">🔒</div>' +
+          '<div style="font-size:19px;font-weight:700;margin:16px 0 8px;color:var(--text);">当前视角无权限访问</div>' +
+          '<div style="font-size:13px;color:var(--text-muted);line-height:1.8;">「行为日志」包含 L0 / L1 原始被动行为明细，<br>仅<b style="color:var(--primary);">开发者</b>视角可查看。<br>当前视角：' +
+            (role === 'boss' ? '老板娘' : '穿搭师 / CA') +
+          '</div>' +
+          '<a href="/sales" style="display:inline-block;margin-top:22px;padding:10px 22px;border-radius:9px;background:var(--primary);color:#fff;text-decoration:none;font-size:13px;font-weight:600;">返回销售工作台</a>' +
+          '<div style="font-size:12px;color:#9CA3AF;margin-top:14px;">如需查看，请在销售工作台右上角切换到「开发者」视角</div>' +
+        '</div>';
+    }
+    return;
+  }
+
   // 默认近24小时
   const now = Date.now();
   document.getElementById('startTime').value = tsToInput(now - 24 * 3600000);

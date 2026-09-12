@@ -8,6 +8,7 @@
  */
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const dataLevels = require('./data-levels');
 
 const db = new sqlite3.Database(path.join(__dirname, 'track.db'), (err) => {
   if (err) console.error('Intent Engine 连接数据库失败:', err.message);
@@ -125,7 +126,7 @@ function computeIntent(logs, opts = {}) {
       const point = def.w * F * R;
       score += point;
       todayScoreMap[dayKey] = (todayScoreMap[dayKey] || 0) + point;
-      scoreDetails.push({ event: evt, label: def.label, weight: def.w, recency: Math.round(R * 100) / 100, point: Math.round(point * 10) / 10, time: ts });
+      scoreDetails.push({ event: evt, label: def.label, weight: def.w, level: dataLevels.levelOf(evt), recency: Math.round(R * 100) / 100, point: Math.round(point * 10) / 10, time: ts });
     }
 
     // 打开天数统计（page_view / *_page_view）
@@ -203,8 +204,8 @@ function computeIntent(logs, opts = {}) {
   /* —— 活跃天数 —— */
   const openDays = Object.keys(dailyOpens).length;
   const recent7Opens = Object.keys(dailyOpens).filter(d => d >= new Date(now - 7 * DAY).toISOString().slice(0, 10)).length;
-  if (openDays >= 2) { score += 10; scoreDetails.push({ event: '__recent', label: '连续 2 天打开', weight: 10, recency: 1, point: 10, time: now }); }
-  if (recent7Opens >= 3) { score += 15; scoreDetails.push({ event: '__recent', label: '7 天内打开 ≥ 3 天', weight: 15, recency: 1, point: 15, time: now }); }
+  if (openDays >= 2) { score += 10; scoreDetails.push({ event: '__recent', label: '连续 2 天打开', weight: 10, level: 'L1', recency: 1, point: 10, time: now }); }
+  if (recent7Opens >= 3) { score += 15; scoreDetails.push({ event: '__recent', label: '7 天内打开 ≥ 3 天', weight: 15, level: 'L1', recency: 1, point: 15, time: now }); }
 
   return {
     score: Math.round(score * 10) / 10,
@@ -276,6 +277,7 @@ function getUserDetail(key, cb) {
         event: r.event,
         url: r.url,
         eventMsg: r.eventMsg,
+        level: r.level || dataLevels.levelOf(r.event),
         extra: parseExtra(r.extra),
         time: r.timestamp,
         formattedTime: formatTime(r.timestamp),
