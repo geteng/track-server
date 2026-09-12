@@ -326,6 +326,7 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
   body[data-role="developer"] .nav-links a.dev-only { display: none; }
   .nav-right #nowText { display: none; }
   .role-switch .role-caption { display: none; }
+  .role-switch .role-btn { padding: 5px 7px; font-size: 11px; }
 
   /* ===== 通用 ===== */
   .view { padding: 14px 12px 32px; }
