@@ -77,6 +77,11 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 13px; }
+/* 权限不足占位：行为时间线仅开发者可见 */
+.perm-locked { text-align: center; padding: 46px 20px; }
+.perm-locked .pl-icon { font-size: 26px; line-height: 1; margin-bottom: 12px; }
+.perm-locked .pl-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.perm-locked .pl-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.7; }
 .loading { text-align: center; padding: 40px; color: var(--text-muted); }
 .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 12px; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

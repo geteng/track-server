@@ -480,12 +480,14 @@ const UserDetail = (() => {
       `<div class="detail-row"><span class="d-label">${esc(d.label)}</span><span class="d-event">${esc(d.event)}</span><span class="d-point">+${d.point}</span></div>`
     ).join('') || '<div class="empty-state">暂无评分明细</div>';
 
-    const timeline = (u.timeline || []).map((t) => {
+    // 行为时间线：仅「开发者」视角可见逐条明细，老板娘 / 穿搭师只展示权限提示
+    const canViewTimeline = currentRole === 'developer';
+    const timeline = canViewTimeline ? (u.timeline || []).map((t) => {
       const extraStr = Object.keys(t.extra || {}).length
         ? `<div class="tl-extra">${Object.entries(t.extra).map(([k, v]) => `${esc(k)}: ${esc(typeof v === 'object' ? JSON.stringify(v) : v)}`).join(' · ')}</div>`
         : '';
       return `<div class="tl-item"><div class="tl-time">${esc(t.formattedTime)}</div><div class="tl-event">${esc(t.event)}${t.eventMsg ? `<span class="tag">${esc(t.eventMsg)}</span>` : ''}</div>${extraStr}</div>`;
-    }).join('');
+    }).join('') : '';
 
     const csHTML = u.crosssellScore > 0
       ? `<div class="cs-box"><div class="cs-amount">潜在金额 ¥${u.crosssellAmount.toLocaleString()}</div><div class="cs-reason">${esc((u.crosssellReasons || []).join(' · '))}</div><div style="margin-top:10px;"><button class="btn btn-sm btn-primary" data-action="gen">🎨 制作下一套穿搭</button></div></div>`
@@ -543,8 +545,14 @@ const UserDetail = (() => {
       <div class="grid-2">
         <div>
           <div class="card" style="margin-bottom:20px;">
-            <div class="card-title">📜 行为时间线 <span class="sub">最近 50 条</span></div>
-            <div class="timeline" style="max-height:420px;overflow-y:auto;">${timeline || '<div class="empty-state">暂无行为记录</div>'}</div>
+            <div class="card-title">📜 行为时间线 <span class="sub">${canViewTimeline ? '最近 50 条' : '仅开发者可见'}</span></div>
+            ${canViewTimeline
+              ? `<div class="timeline" style="max-height:420px;overflow-y:auto;">${timeline || '<div class="empty-state">暂无行为记录</div>'}</div>`
+              : `<div class="perm-locked">
+                  <div class="pl-icon">🔒</div>
+                  <div class="pl-title">权限不足无法查看</div>
+                  <div class="pl-sub">行为时间线包含用户逐条行为明细，仅「开发者」视角可查看。<br>当前视角：${ROLE_META[currentRole].label}</div>
+                </div>`}
           </div>
           <div class="card">
             <div class="card-title">🧮 评分明细 <span class="sub">IntentScore = Σ(W×F×R)</span></div>

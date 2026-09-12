@@ -482,12 +482,10 @@ app.get('/api/intent/user', (req, res) => {
 
     db.all(`SELECT * FROM follow_up WHERE user_key = ? ORDER BY created_at DESC`, [user.key], (err2, fus) => {
       if (err2) return res.status(500).json({ code: -1, msg: err2.message });
-      // 按角色过滤时间线：CA 仅可见主动动作(L2)，看不到逐条被动浏览(L0/L1)
-      const allowed = dataLevels.allowedLevelsFor(role);
+      // 行为时间线：仅「开发者」视角下发逐条行为明细；老板娘 / 穿搭师一律返回空数组
+      // （前端对应展示「权限不足无法查看」，此处不下发数据，避免前端隐藏后仍可通过接口拿到明细）
       const data = sanitizeUserForRole(user, role);
-      if (Array.isArray(data.timeline)) {
-        data.timeline = data.timeline.filter(t => allowed.includes(t.level || dataLevels.levelOf(t.event)));
-      }
+      data.timeline = (role === 'developer' && Array.isArray(user.timeline)) ? user.timeline : [];
       res.json({ code: 0, data: { ...data, role, followUps: fus } });
     });
   });
