@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>airU 销售工作台</title>
+<link rel="stylesheet" href="/sales-app.css">
+</head>
+<body>
+<script>
+  // 首屏即按角色锁定「行为日志」入口可见性，避免加载瞬间闪烁
+  (function () {
+    var r = localStorage.getItem('salesRole');
+    if (r !== 'developer' && r !== 'boss' && r !== 'ca') r = 'ca';
+    document.body.setAttribute('data-role', r);
+  })();
+</script>
+
+<!-- ==================== 统一顶部导航（三个视图共用一个地址） ==================== -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a class="logo" href="#/"><span class="icon">👗</span> airU 销售工作台</a>
+    <div class="nav-links">
+      <a href="#/" data-nav="overview">今日概览</a>
+      <a href="#/users" data-nav="users">用户列表</a>
+      <a href="/userBehavior" class="nav-mobile-hide dev-only">行为日志</a>
+    </div>
+    <div class="nav-right">
+      <div class="role-switch" id="roleSwitch">
+        <span class="role-caption">视角</span>
+        <button class="role-btn" data-role="developer">开发者</button>
+        <button class="role-btn" data-role="boss">老板娘</button>
+        <button class="role-btn active" data-role="ca">穿搭师</button>
+      </div>
+      <span id="nowText"></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== 视图一：今日概览 ==================== -->
+<section class="view" id="view-overview">
+  <div class="page-title" id="pageTitle">今日概览</div>
+  <div class="page-sub">把海量用户行为压缩成三件事：谁最值得今天跟进、为什么值得、下一步该做什么。</div>
+  <div class="role-banner" id="roleBanner"></div>
+
+  <!-- 6 个数字 -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card" data-route="#/users?tab=hot"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
+    <div class="stat-card" data-route="#/users?tab=followup"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
+    <div class="stat-card" data-route="#/users?tab=crosssell"><div class="icon-badge bg-green">🛍️</div><div class="label">连带销售机会金额</div><div class="value" id="statCrosssell">—</div><div class="detail" id="statCrosssellDetail"></div></div>
+    <div class="stat-card" data-route="#/users?tab=followup"><div class="icon-badge bg-purple">💬</div><div class="label">今日已联系用户</div><div class="value" id="statContacted">—</div><div class="detail">来自跟进任务完成</div></div>
+    <div class="stat-card" id="statConversionCard" data-route="#/users?tab=all"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
+    <div class="stat-card" id="statMonthCard" data-route="#/users?tab=crosssell"><div class="icon-badge bg-red">💰</div><div class="label">本月连带销售金额</div><div class="value" id="statMonthCrosssell">—</div><div class="detail">潜在成交口径</div></div>
+  </div>
+
+  <!-- 今日行动摘要 -->
+  <div class="summary-card">
+    <div class="card-title">🤖 今日行动摘要 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">自动生成 · 每天最重要的 3 件事</span></div>
+    <div id="summaryList">
+      <div class="loading"><div class="spinner"></div>正在计算意图引擎…</div>
+    </div>
+  </div>
+
+  <!-- 今日重点 -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🔥 今日重点 <span id="hotCount" style="font-size:12px;color:var(--text-muted);font-weight:400;"></span></h2>
+      <a class="more" href="#/users?tab=hot">查看全部 →</a>
+    </div>
+    <div class="user-grid" id="hotGrid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+
+  <!-- 连带机会 -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🛍️ 连带销售机会 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">基于已有兴趣推荐整套搭配</span></h2>
+      <a class="more" href="#/users?tab=crosssell">查看全部 →</a>
+    </div>
+    <div class="crosssell-grid" id="crosssellGrid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+
+  <!-- 数据层级分布（开发者视角） -->
+  <div class="section" id="levelSection" style="display:none;">
+    <div class="section-head">
+      <h2>🧩 数据层级分布 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">开发者视角 · 依据《用户行为追踪边界规范》分层统计上报量</span></h2>
+    </div>
+    <div class="level-grid" id="levelGrid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 视图二：用户列表 ==================== -->
+<section class="view" id="view-users">
+  <div class="page-title">高意向用户列表</div>
+  <div class="page-sub">按 Priority = IntentScore × Momentum 排序，优先跟进正在升温的用户。</div>
+
+  <div class="tabs" id="userTabs">
+    <button class="tab" data-tab="hot">🔥 今日重点<span class="count" id="cnt-hot">-</span></button>
+    <button class="tab" data-tab="followup">📌 待跟进<span class="count" id="cnt-followup">-</span></button>
+    <button class="tab" data-tab="crosssell">🛍️ 连带机会<span class="count" id="cnt-crosssell">-</span></button>
+    <button class="tab" data-tab="all">👥 全部会员<span class="count" id="cnt-all">-</span></button>
+  </div>
+
+  <div class="table-section">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>用户</th>
+            <th class="col-hide-mobile">意向分</th>
+            <th class="col-hide-mobile">加速 ×</th>
+            <th class="col-hide-mobile">优先级</th>
+            <th>今日信号</th>
+            <th class="col-hide-mobile">连带机会</th>
+            <th class="col-hide-mobile">行为数</th>
+            <th class="col-hide-mobile">跟进状态</th>
+            <th style="min-width:130px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="9"><div class="loading"><div class="spinner"></div>加载中…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="page-info" id="pageInfo"></div>
+      <div class="page-btns">
+        <button class="btn btn-outline" data-page="-1">← 上一页</button>
+        <button class="btn btn-outline" data-page="1">下一页 →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 视图三：用户详情 ==================== -->
+<section class="view" id="view-user">
+  <div id="userRoot">
+    <div class="loading"><div class="spinner"></div>加载用户数据…</div>
+  </div>
+</section>
+
+<!-- ==================== 弹窗：预约跟进（列表 / 详情共用） ==================== -->
+<div class="modal-mask" id="fuMask">
+  <div class="modal">
+    <h3>📌 预约跟进</h3>
+    <div id="fuTarget" style="font-size:12px;color:var(--text-muted);margin:-8px 0 14px;"></div>
+    <div class="form-item">
+      <label>负责跟进人</label>
+      <select id="fuOwner">
+        <option value="">请选择</option>
+        <option value="小林">小林</option>
+        <option value="小付">小付</option>
+        <option value="小陈">小陈</option>
+        <option value="小葛">小葛</option>
+        <option value="林老师">林老师</option>
+        <option value="赵老师">赵老师</option>
+      </select>
+    </div>
+    <div class="form-item">
+      <label>跟进时间</label>
+      <select id="fuPlanTime">
+        <option value="今天下午">今天下午</option>
+        <option value="明天上午">明天上午</option>
+        <option value="明天下午">明天下午</option>
+        <option value="后天">后天</option>
+        <option value="本周内">本周内</option>
+      </select>
+    </div>
+    <div class="form-item">
+      <label>跟进内容 / 备注</label>
+      <textarea id="fuNote" rows="3" placeholder="例如：围绕她收藏的西装整套推荐"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" data-close="fuMask">取消</button>
+      <button class="btn btn-primary" id="fuSubmit">确认预约</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 弹窗：生成穿搭（详情专属） ==================== -->
+<div class="modal-mask" id="genMask">
+  <div class="modal">
+    <h3>🎨 制作下一套穿搭</h3>
+    <div class="form-item">
+      <label>穿搭主题</label>
+      <select id="genStyle">
+        <option value="通勤">通勤</option>
+        <option value="休闲">休闲</option>
+        <option value="约会">约会</option>
+        <option value="度假">度假</option>
+        <option value="根据用户偏好">根据用户偏好</option>
+      </select>
+    </div>
+    <div class="form-item">
+      <label>数量</label>
+      <select id="genCount">
+        <option value="2">2 套</option>
+        <option value="3" selected>3 套</option>
+      </select>
+    </div>
+    <button class="btn btn-green btn-block" id="genSubmit">✨ 生成搭配</button>
+    <div id="genResult"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" data-close="genMask">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="/sales-app.js"></script>
+</body>
+</html>

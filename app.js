@@ -615,19 +615,29 @@ app.use('/design2', express.static(path.join(__dirname, 'public', 'design2')));
 // 新版 UI（design3）静态资源：/design3/xxx.html 直接访问
 app.use('/design3', express.static(path.join(__dirname, 'public', 'design3')));
 
+// 销售工作台单页应用的静态资源（sales-app.css / sales-app.js）
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
 // 根路径：默认进入销售工作台
 app.get('/', (req, res) => res.redirect('/sales'));
 
 app.get('/userBehavior', (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
 
-// 销售工作台：首页（6 数字 + 行动摘要 + 今日重点）
-app.get('/sales', (req, res) => sendHtml(res, 'sales-dashboard.html', '销售工作台首页'));
+/* ---- 销售工作台：单页应用 ----
+   今日概览 / 用户列表 / 用户详情合并为一个页面，对外只暴露 /sales，
+   三个视图通过 hash 路由切换：#/ 概览 · #/users 列表 · #/user?key= 详情 */
+app.get('/sales', (req, res) => sendHtml(res, 'sales-app.html', '销售工作台'));
 
-// 销售工作台：用户列表（4 个 Tab）
-app.get('/sales/users', (req, res) => sendHtml(res, 'sales-users.html', '高意向用户列表'));
+// 旧地址兼容：301 到单页应用的对应视图
+app.get('/sales/users', (req, res) => {
+  const tab = req.query.tab ? `?tab=${encodeURIComponent(req.query.tab)}` : '';
+  res.redirect(`/sales#/users${tab}`);
+});
 
-// 销售工作台：用户详情（销售工作台）
-app.get('/sales/user', (req, res) => sendHtml(res, 'sales-user.html', '用户详情销售工作台'));
+app.get('/sales/user', (req, res) => {
+  const key = req.query.key ? `?key=${encodeURIComponent(req.query.key)}` : '';
+  res.redirect(`/sales#/user${key}`);
+});
 
 /* ============ 启动 ============ */
 app.listen(PORT, '0.0.0.0', () => {
@@ -645,7 +655,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   层级分布:     GET  /api/intent/level-stats`);
   console.log(`   用户授权:     GET/POST /api/consent`);
   console.log(`   Dashboard:    GET  /userBehavior`);
-  console.log(`   销售工作台:   GET  /sales`);
-  console.log(`   用户列表:     GET  /sales/users`);
-  console.log(`   用户详情页:   GET  /sales/user?key=`);
+  console.log(`   销售工作台:   GET  /sales            （单页应用 #/ 概览 · #/users 列表 · #/user?key= 详情）`);
+  console.log(`   旧地址兼容:   GET  /sales/users 与 /sales/user 自动跳转 /sales`);
 });
