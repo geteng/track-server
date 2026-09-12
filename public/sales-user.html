@@ -120,6 +120,19 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 .fu-done { background: var(--green-light); color: #065F46; }
 .fu-canceled { background: var(--bg); color: var(--text-muted); }
 
+/* ===== 无 key 参数时的输入页 ===== */
+.key-gate-wrap { display: flex; justify-content: center; padding: 56px 0 40px; }
+.key-gate { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 36px 32px; width: 100%; max-width: 580px; text-align: center; }
+.key-gate .kg-icon { font-size: 44px; line-height: 1; }
+.key-gate .kg-title { font-size: 19px; font-weight: 700; margin: 14px 0 8px; }
+.key-gate .kg-sub { font-size: 13px; color: var(--text-muted); line-height: 1.8; }
+.key-gate .kg-sub .mono { font-family: monospace; color: var(--primary); }
+.key-gate .kg-form { display: flex; gap: 10px; margin-top: 22px; }
+.key-gate .kg-input { flex: 1; min-width: 0; padding: 11px 14px; border: 1px solid var(--border-dark); border-radius: 10px; font-size: 13px; font-family: monospace; background: var(--card-bg); color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.key-gate .kg-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.key-gate .kg-input::placeholder { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #9CA3AF; }
+.key-gate .kg-hint { font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+
 /* 空态/加载 */
 .empty-state { text-align: center; padding: 32px 20px; color: var(--text-muted); font-size: 13px; }
 .loading { text-align: center; padding: 40px; color: var(--text-muted); }
@@ -156,6 +169,11 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
   .nav-links a.nav-mobile-hide { display: none; }
   body[data-role="developer"] .nav-links a.dev-only { display: none; }
   .nav-right { display: none; }
+  /* key 输入页小屏改为纵向排列 */
+  .key-gate-wrap { padding: 28px 0; }
+  .key-gate { padding: 28px 20px; }
+  .key-gate .kg-form { flex-direction: column; }
+  .key-gate .kg-form .btn { justify-content: center; }
 }
 </style>
 </head>
@@ -259,11 +277,41 @@ let userData = null;
   const params = new URLSearchParams(location.search);
   userKey = params.get('key') || params.get('uid') || '';
   if (!userKey) {
-    document.getElementById('pageRoot').innerHTML = '<div class="empty-state">缺少用户 key 参数，请从列表进入</div>';
+    // 地址栏没有 key 参数：展示 key 输入框，输入后带参跳转
+    renderKeyGate();
     return;
   }
   load();
 })();
+
+// 无 key 参数时的输入引导页
+function renderKeyGate() {
+  document.getElementById('pageRoot').innerHTML = `
+    <div class="key-gate-wrap">
+      <div class="key-gate">
+        <div class="kg-icon">🔎</div>
+        <div class="kg-title">查询用户详情</div>
+        <div class="kg-sub">
+          请输入要查看的用户 <b>key</b>，或直接在地址栏带上参数访问<br>
+          <span class="mono">/sales/user?key=xxxx</span>
+        </div>
+        <div class="kg-form">
+          <input class="kg-input" id="keyInput" type="text" autocomplete="off" spellcheck="false" placeholder="请输入用户 key，例如 e46092e8-8c66-4208-add3-80e062b6a774">
+          <button class="btn btn-primary" id="keySubmit">查询</button>
+        </div>
+        <div class="kg-hint">提示：也可以从「用户列表」点击任一用户直接进入</div>
+      </div>
+    </div>`;
+  const input = document.getElementById('keyInput');
+  const go = () => {
+    const v = input.value.trim();
+    if (!v) { input.focus(); return; }
+    location.href = '/sales/user?key=' + encodeURIComponent(v);
+  };
+  document.getElementById('keySubmit').addEventListener('click', go);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  input.focus();
+}
 
 setInterval(() => {
   const d = new Date();
@@ -307,7 +355,9 @@ async function load() {
     userData = json.data;
     render(json.data);
   } catch (e) {
-    document.getElementById('pageRoot').innerHTML = '<div class="empty-state">加载失败：' + e.message + '</div>';
+    document.getElementById('pageRoot').innerHTML =
+      '<div class="empty-state">加载失败：' + e.message +
+      '<div style="margin-top:16px;"><button class="btn btn-outline" onclick="renderKeyGate()">重新输入 key</button></div></div>';
   }
 }
 
