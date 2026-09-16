@@ -97,9 +97,9 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 /* ============================================================
    视图一：今日概览
    ============================================================ */
-/* 4 数字卡片 */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
-.stats-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+/* 3 数字卡片 */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.stats-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .stat-card::after { content: '→'; position: absolute; right: 14px; bottom: 12px; font-size: 16px; color: var(--text-muted); opacity: 0; transform: translateX(-4px); transition: all 0.2s; }
@@ -288,7 +288,7 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
    ============================================================ */
 @media (max-width: 1200px) {
   #view-overview .stats-row { grid-template-columns: repeat(3, 1fr); }
-  #view-overview .stats-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  #view-overview .stats-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
   #view-overview .user-grid,
   #view-overview .level-grid { grid-template-columns: repeat(2, 1fr); }
   #view-user .metrics-row { grid-template-columns: repeat(3, 1fr); }
@@ -316,7 +316,7 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 
   /* ===== 概览 ===== */
   #view-overview .stats-row { grid-template-columns: repeat(2, 1fr); }
-  #view-overview .stats-row.cols-3 { grid-template-columns: repeat(2, 1fr); }
+  #view-overview .stats-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
   #view-overview .user-grid,
   #view-overview .level-grid { grid-template-columns: 1fr; }
   #view-overview .stat-card { padding: 14px 12px; }

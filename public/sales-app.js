@@ -76,7 +76,7 @@ function applyRole() {
   const convCard = $('statConversionCard');
   if (convCard) convCard.style.display = bizVisible ? '' : 'none';
   const statsRow = $('statsRow');
-  if (statsRow) statsRow.classList.toggle('cols-3', !bizVisible);
+  if (statsRow) statsRow.classList.toggle('cols-2', !bizVisible);
 
   // 开发者专属调试面板
   const levelSection = $('levelSection');
@@ -213,13 +213,12 @@ const Overview = (() => {
       const summary = hotRes.data.summary || {};
       const followUps = fuRes.data || [];
 
-      // 4 个数字磁贴
+      // 3 个数字磁贴
       $('statHot').textContent = summary.hotUsers ?? hotList.length;
       $('statHotDetail').innerHTML = hotList.length ? `Top: <span>${esc(hotList[0].displayName)}</span>（优先级 ${hotList[0].priority}）` : '';
       $('statFollowUp').textContent = summary.pendingFollowUps ?? followUps.filter((f) => f.status === 'pending').length;
       const pending = followUps.filter((f) => f.status === 'pending');
       $('statFollowUpDetail').innerHTML = pending.length ? `最近: <span>${esc(pending[0].display_name)}</span>` : '';
-      $('statContacted').textContent = followUps.filter((f) => f.status === 'done').length;
       $('statConversion').innerHTML = '—';
 
       // 今日行动摘要
