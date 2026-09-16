@@ -43,14 +43,12 @@
   <div class="page-sub">把海量用户行为压缩成三件事：谁最值得今天跟进、为什么值得、下一步该做什么。</div>
   <div class="role-banner" id="roleBanner"></div>
 
-  <!-- 6 个数字 -->
+  <!-- 4 个数字 -->
   <div class="stats-row" id="statsRow">
     <div class="stat-card" data-route="#/users?tab=hot"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
     <div class="stat-card" data-route="#/users?tab=followup"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
-    <div class="stat-card" data-route="#/users?tab=crosssell"><div class="icon-badge bg-green">🛍️</div><div class="label">连带销售机会金额</div><div class="value" id="statCrosssell">—</div><div class="detail" id="statCrosssellDetail"></div></div>
     <div class="stat-card" data-route="#/users?tab=followup"><div class="icon-badge bg-purple">💬</div><div class="label">今日已联系用户</div><div class="value" id="statContacted">—</div><div class="detail">来自跟进任务完成</div></div>
     <div class="stat-card" id="statConversionCard" data-route="#/users?tab=all"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
-    <div class="stat-card" id="statMonthCard" data-route="#/users?tab=crosssell"><div class="icon-badge bg-red">💰</div><div class="label">本月连带销售金额</div><div class="value" id="statMonthCrosssell">—</div><div class="detail">潜在成交口径</div></div>
   </div>
 
   <!-- 今日行动摘要 -->
@@ -68,17 +66,6 @@
       <a class="more" href="#/users?tab=hot">查看全部 →</a>
     </div>
     <div class="user-grid" id="hotGrid">
-      <div class="loading"><div class="spinner"></div>加载中…</div>
-    </div>
-  </div>
-
-  <!-- 连带机会 -->
-  <div class="section">
-    <div class="section-head">
-      <h2>🛍️ 连带销售机会 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">基于已有兴趣推荐整套搭配</span></h2>
-      <a class="more" href="#/users?tab=crosssell">查看全部 →</a>
-    </div>
-    <div class="crosssell-grid" id="crosssellGrid">
       <div class="loading"><div class="spinner"></div>加载中…</div>
     </div>
   </div>
@@ -102,7 +89,6 @@
   <div class="tabs" id="userTabs">
     <button class="tab" data-tab="hot">🔥 今日重点<span class="count" id="cnt-hot">-</span></button>
     <button class="tab" data-tab="followup">📌 待跟进<span class="count" id="cnt-followup">-</span></button>
-    <button class="tab" data-tab="crosssell">🛍️ 连带机会<span class="count" id="cnt-crosssell">-</span></button>
     <button class="tab" data-tab="all">👥 全部会员<span class="count" id="cnt-all">-</span></button>
   </div>
 
@@ -116,14 +102,13 @@
             <th class="col-hide-mobile">加速 ×</th>
             <th class="col-hide-mobile">优先级</th>
             <th>今日信号</th>
-            <th class="col-hide-mobile">连带机会</th>
             <th class="col-hide-mobile">行为数</th>
             <th class="col-hide-mobile">跟进状态</th>
             <th style="min-width:130px;">操作</th>
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="9"><div class="loading"><div class="spinner"></div>加载中…</div></td></tr>
+          <tr><td colspan="8"><div class="loading"><div class="spinner"></div>加载中…</div></td></tr>
         </tbody>
       </table>
     </div>

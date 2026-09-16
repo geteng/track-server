@@ -97,9 +97,9 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 /* ============================================================
    视图一：今日概览
    ============================================================ */
-/* 6 数字卡片 */
-.stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
-.stats-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+/* 4 数字卡片 */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.stats-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
 .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .stat-card::after { content: '→'; position: absolute; right: 14px; bottom: 12px; font-size: 16px; color: var(--text-muted); opacity: 0; transform: translateX(-4px); transition: all 0.2s; }
@@ -151,15 +151,6 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 .user-card .u-metrics .m .k { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .user-card .u-actions { display: flex; gap: 8px; margin-top: 12px; }
 .user-card .u-actions .btn { flex: 1; }
-
-/* 连带机会预览 */
-.crosssell-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.crosssell-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.2s; }
-.crosssell-card:hover { border-color: var(--green); box-shadow: 0 4px 12px rgba(16,185,129,0.12); }
-.crosssell-card .cs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.crosssell-card .cs-name { font-size: 13px; font-weight: 600; }
-.crosssell-card .cs-amount { font-size: 15px; font-weight: 700; color: var(--green); }
-.crosssell-card .cs-reason { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
 /* 数据层级分布（开发者视角） */
 .level-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -265,10 +256,6 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 .tl-item .tl-extra { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .tl-item .tl-event .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; background: var(--bg); color: var(--text-muted); font-weight: 400; }
 
-.cs-box { background: var(--green-light); border: 1px solid #A7F3D0; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
-.cs-box .cs-amount { font-size: 20px; font-weight: 700; color: #065F46; }
-.cs-box .cs-reason { font-size: 12px; color: #065F46; margin-top: 4px; line-height: 1.6; }
-
 .fu-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg); margin-bottom: 8px; }
 .fu-item:last-child { margin-bottom: 0; }
 .fu-item .fu-info { font-size: 13px; }
@@ -301,9 +288,8 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
    ============================================================ */
 @media (max-width: 1200px) {
   #view-overview .stats-row { grid-template-columns: repeat(3, 1fr); }
-  #view-overview .stats-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  #view-overview .stats-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
   #view-overview .user-grid,
-  #view-overview .crosssell-grid,
   #view-overview .level-grid { grid-template-columns: repeat(2, 1fr); }
   #view-user .metrics-row { grid-template-columns: repeat(3, 1fr); }
   #view-user .grid-2 { grid-template-columns: 1fr; }
@@ -330,9 +316,8 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 
   /* ===== 概览 ===== */
   #view-overview .stats-row { grid-template-columns: repeat(2, 1fr); }
-  #view-overview .stats-row.cols-4 { grid-template-columns: repeat(2, 1fr); }
+  #view-overview .stats-row.cols-3 { grid-template-columns: repeat(2, 1fr); }
   #view-overview .user-grid,
-  #view-overview .crosssell-grid,
   #view-overview .level-grid { grid-template-columns: 1fr; }
   #view-overview .stat-card { padding: 14px 12px; }
   #view-overview .stat-card .value { font-size: 22px; }

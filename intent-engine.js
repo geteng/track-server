@@ -4,7 +4,6 @@
  *   IntentScore   = Σ(W × F × R)       高意向评分
  *   Momentum      = 近期加速因子         意向加速分
  *   Priority      = IntentScore × Momentum  综合优先级
- *   CrossSellScore= 连带销售机会评分
  */
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
@@ -104,10 +103,9 @@ function computeIntent(logs, opts = {}) {
   const todayScoreMap = {};      // 每天得分（key: YYYY-MM-DD）
   const dailyOpens = {};         // 每天是否打开（计算连续打开天数）
 
-  // 收集商品相关（连带销售）
+  // 收集商品相关（收藏数 / 浏览商品数，用于信号标签与跟进话术）
   const viewedSkus = new Set();
   const collectedLooks = new Set();
-  const consultTopics = [];
 
   for (const log of logs) {
     const evt = log.event;
@@ -140,9 +138,6 @@ function computeIntent(logs, opts = {}) {
     if (evt === 'customize_collect_look' || evt === 'wishlist_add') {
       const look = extra.lookId || extra.styleId || `LOOK-${ts % 9973}`;
       collectedLooks.add(String(look));
-    }
-    if (evt === 'customize_consult_open' || evt === 'consult_sku' || evt === 'consult_full_outfit') {
-      if (extra.topic) consultTopics.push(extra.topic);
     }
   }
 
@@ -182,25 +177,6 @@ function computeIntent(logs, opts = {}) {
 
   const priority = score * momentum;
 
-  /* —— 连带销售评分 Cross-sell Score —— */
-  let crosssellScore = 0;
-  const crosssellReasons = [];
-  // 兴趣浏览信号（定制/衣柜/心愿单/商品页）
-  const styleBrowseCount = logs.filter(l => /wardrobe_page_view|wishlist_page_view|customize_page_view|wardrobe_item_tap|wishlist_item_detail|view_price_size/.test(l.event)).length;
-  if (collectedLooks.size >= 2) { crosssellScore += 25; crosssellReasons.push(`同时收藏 ${collectedLooks.size} 件`); }
-  if (consultTopics.some(t => /整套|搭配|一套/i.test(t))) { crosssellScore += 40; crosssellReasons.push('咨询整套搭配'); }
-  if (viewedSkus.size >= 3) { crosssellScore += 20; crosssellReasons.push(`浏览多个商品（${viewedSkus.size} 个）`); }
-  if (styleBrowseCount >= 3) { crosssellScore += 15; crosssellReasons.push('围绕风格多次浏览'); }
-  if (logs.some(l => /try_on|tryon|video/i.test(l.event))) { crosssellScore += 15; crosssellReasons.push('视频/试穿关注搭配'); }
-  if (logs.some(l => l.event === 'customize_try_on' || l.event === 'try_on_click')) { crosssellScore += 20; crosssellReasons.push('试穿虚拟搭配'); }
-  if (crosssellScore > 0 && collectedLooks.size === 0 && viewedSkus.size === 0 && styleBrowseCount > 0) {
-    // 浏览了风格页但没有明确商品收藏，仍可触发 1~2 件推荐
-    crosssellReasons.push('对风格感兴趣，可主动推搭配');
-  }
-  const crosssellAmount = crosssellScore > 0
-    ? Math.round(collectedLooks.size * 1280 + viewedSkus.size * 980 + styleBrowseCount * 320 + crosssellScore * 30)
-    : 0;
-
   /* —— 活跃天数 —— */
   const openDays = Object.keys(dailyOpens).length;
   const recent7Opens = Object.keys(dailyOpens).filter(d => d >= new Date(now - 7 * DAY).toISOString().slice(0, 10)).length;
@@ -211,9 +187,6 @@ function computeIntent(logs, opts = {}) {
     score: Math.round(score * 10) / 10,
     momentum: Math.round(momentum * 100) / 100,
     priority: Math.round(priority * 10) / 10,
-    crosssellScore,
-    crosssellAmount,
-    crosssellReasons,
     isHeatingUp,
     lastActive: logs.length ? Math.max(...logs.map(l => l.timestamp)) : 0,
     behaviorCount: logs.length,

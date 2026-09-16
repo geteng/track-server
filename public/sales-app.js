@@ -15,7 +15,6 @@ if (!ROLE_META[currentRole]) currentRole = 'ca';
 /* ================= 通用工具 ================= */
 const $ = (id) => document.getElementById(id);
 const pad2 = (x) => String(x).padStart(2, '0');
-const fmtMoney = (n) => '¥' + Number(n || 0).toLocaleString('zh-CN');
 const fmtDateTime = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 const fmtFullTime = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,11 +74,9 @@ function applyRole() {
   // 经营指标（仅开发者 / 老板娘可见）
   const bizVisible = currentRole !== 'ca';
   const convCard = $('statConversionCard');
-  const monthCard = $('statMonthCard');
   if (convCard) convCard.style.display = bizVisible ? '' : 'none';
-  if (monthCard) monthCard.style.display = bizVisible ? '' : 'none';
   const statsRow = $('statsRow');
-  if (statsRow) statsRow.classList.toggle('cols-4', !bizVisible);
+  if (statsRow) statsRow.classList.toggle('cols-3', !bizVisible);
 
   // 开发者专属调试面板
   const levelSection = $('levelSection');
@@ -179,7 +176,6 @@ const Overview = (() => {
     if (u.isHeatingUp) signals.push('<span class="signal-tag key">⚡ 正在升温</span>');
     if (u.collectedLooks > 0) signals.push(`<span class="signal-tag">收藏 ${u.collectedLooks}</span>`);
     if (u.viewedSkus > 0) signals.push(`<span class="signal-tag">浏览商品 ${u.viewedSkus}</span>`);
-    if (u.crosssellScore > 0) signals.push(`<span class="signal-tag">连带 ¥${u.crosssellAmount.toLocaleString()}</span>`);
     if (!signals.length) signals.push('<span class="signal-tag">近 48h 活跃</span>');
 
     const routeTo = `#/user?key=${encodeURIComponent(u.key)}`;
@@ -204,45 +200,27 @@ const Overview = (() => {
     </div>`;
   }
 
-  function crosssellCardHTML(u) {
-    return `<div class="crosssell-card" data-route="#/user?key=${encodeURIComponent(u.key)}">
-      <div class="cs-head">
-        <div>
-          <div class="cs-name">${esc(u.displayName)} <span style="font-size:11px;color:var(--text-muted);font-weight:400;">${esc(u.aid || '')}</span></div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">连带评分 ${u.crosssellScore} 分</div>
-        </div>
-        <div class="cs-amount">${fmtMoney(u.crosssellAmount)}</div>
-      </div>
-      <div class="cs-reason">${esc((u.crosssellReasons || []).join(' · ') || '潜在连带机会')}</div>
-    </div>`;
-  }
-
   async function refresh() {
     try {
-      const [hotRes, crossRes, summaryRes, fuRes, levelRes] = await Promise.all([
+      const [hotRes, summaryRes, fuRes, levelRes] = await Promise.all([
         fetch(`/api/intent/users?tab=hot&size=6&role=${currentRole}`).then((r) => r.json()),
-        fetch(`/api/intent/users?tab=crosssell&size=3&role=${currentRole}`).then((r) => r.json()),
         fetch(`/api/intent/action-summary?role=${currentRole}`).then((r) => r.json()),
         fetch('/api/follow-ups?status=all').then((r) => r.json()),
         currentRole === 'developer' ? fetch('/api/intent/level-stats').then((r) => r.json()) : Promise.resolve({ data: null }),
       ]);
 
       const hotList = hotRes.data.list || [];
-      const crossList = crossRes.data.list || [];
       const summary = hotRes.data.summary || {};
       const followUps = fuRes.data || [];
 
-      // 6 个数字磁贴
+      // 4 个数字磁贴
       $('statHot').textContent = summary.hotUsers ?? hotList.length;
       $('statHotDetail').innerHTML = hotList.length ? `Top: <span>${esc(hotList[0].displayName)}</span>（优先级 ${hotList[0].priority}）` : '';
       $('statFollowUp').textContent = summary.pendingFollowUps ?? followUps.filter((f) => f.status === 'pending').length;
       const pending = followUps.filter((f) => f.status === 'pending');
       $('statFollowUpDetail').innerHTML = pending.length ? `最近: <span>${esc(pending[0].display_name)}</span>` : '';
-      $('statCrosssell').textContent = fmtMoney(summary.crosssellTotal);
-      $('statCrosssellDetail').innerHTML = crossList.length ? `最大: <span>${fmtMoney(crossList[0].crosssellAmount)}</span>` : '';
       $('statContacted').textContent = followUps.filter((f) => f.status === 'done').length;
       $('statConversion').innerHTML = '—';
-      $('statMonthCrosssell').textContent = fmtMoney(summary.monthCrossSell);
 
       // 今日行动摘要
       const items = summaryRes.data.items || [];
@@ -258,11 +236,6 @@ const Overview = (() => {
       $('hotGrid').innerHTML = hotList.length
         ? hotList.map(userCardHTML).join('')
         : '<div class="empty-state">当前没有正在升温的高意向用户<br>可在「全部会员」中浏览</div>';
-
-      // 连带机会
-      $('crosssellGrid').innerHTML = crossList.length
-        ? crossList.map(crosssellCardHTML).join('')
-        : '<div class="empty-state">暂无连带销售机会</div>';
 
       // 数据层级分布（开发者视角）
       if (currentRole === 'developer' && levelRes && levelRes.data) {
@@ -292,7 +265,7 @@ const Overview = (() => {
    视图二：用户列表
    ============================================================ */
 const Users = (() => {
-  const TAB_META = { hot: '今日重点', followup: '待跟进', crosssell: '连带机会', all: '全部会员' };
+  const TAB_META = { hot: '今日重点', followup: '待跟进', all: '全部会员' };
   const PAGE_SIZE = 20;
   let curTab = 'hot';
   let curPage = 1;
@@ -314,10 +287,6 @@ const Users = (() => {
     if (u.todayScore > 0) signals.push(`<span class="pill pill-blue">近48h ${Math.round(u.todayScore)}分</span>`);
     if (!signals.length) signals.push('<span class="pill pill-gray">—</span>');
 
-    const cross = u.crosssellScore > 0
-      ? `<span class="pill pill-green">${u.crosssellScore}分 · ¥${u.crosssellAmount.toLocaleString()}</span>`
-      : '<span class="pill pill-gray">—</span>';
-
     const fu = u.followUp
       ? `<span class="fu-tag">📌 ${esc(u.followUp.plan_time)}</span>`
       : '<span class="pill pill-gray">未预约</span>';
@@ -336,7 +305,6 @@ const Users = (() => {
       <td class="col-hide-mobile">×${u.momentum}</td>
       <td class="col-hide-mobile"><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
       <td>${signals.join('')}</td>
-      <td class="col-hide-mobile">${cross}</td>
       <td class="col-hide-mobile">${u.behaviorCount}</td>
       <td class="col-hide-mobile">${fu}</td>
       <td>
@@ -351,23 +319,21 @@ const Users = (() => {
   async function refresh() {
     try {
       const roleQ = `role=${currentRole}`;
-      const [mainRes, hotRes, fuRes, crossRes, allRes] = await Promise.all([
+      const [mainRes, hotRes, fuRes, allRes] = await Promise.all([
         fetch(`/api/intent/users?tab=${curTab}&page=${curPage}&size=${PAGE_SIZE}&${roleQ}`).then((r) => r.json()),
         fetch(`/api/intent/users?tab=hot&size=1&${roleQ}`).then((r) => r.json()),
         fetch(`/api/intent/users?tab=followup&size=1&${roleQ}`).then((r) => r.json()),
-        fetch(`/api/intent/users?tab=crosssell&size=1&${roleQ}`).then((r) => r.json()),
         fetch(`/api/intent/users?tab=all&size=1&${roleQ}`).then((r) => r.json()),
       ]);
 
       $('cnt-hot').textContent = hotRes.data.total;
       $('cnt-followup').textContent = fuRes.data.total;
-      $('cnt-crosssell').textContent = crossRes.data.total;
       $('cnt-all').textContent = allRes.data.total;
 
       const { list, total, page, size } = mainRes.data;
       $('tableBody').innerHTML = list.length
         ? list.map(rowHTML).join('')
-        : '<tr><td colspan="9"><div class="empty-state">「' + TAB_META[curTab] + '」暂无用户</div></td></tr>';
+        : '<tr><td colspan="8"><div class="empty-state">「' + TAB_META[curTab] + '」暂无用户</div></td></tr>';
 
       const totalPages = Math.max(1, Math.ceil(total / size));
       $('pageInfo').textContent = `第 ${page} / ${totalPages} 页 · 共 ${total} 位用户`;
@@ -460,7 +426,6 @@ const UserDetail = (() => {
     const list = [];
     const base = `【${u.displayName}】意向分 ${u.score}，最近 ${u.behaviorCount} 次行为`;
     if (u.isHeatingUp) list.push(`【主动联系】${u.displayName} 正在升温（加速 ×${u.momentum}），今天联系转化概率最高，建议优先微信沟通。`);
-    if (u.crosssellScore > 0) list.push(`【连带推荐】围绕她已收藏/浏览的商品整套推荐，潜在连带金额约 ¥${u.crosssellAmount.toLocaleString()}。`);
     if (u.collectedLooks > 0) list.push(`【回访收藏】她收藏了 ${u.collectedLooks} 件 Look，可以提醒优惠活动或帮她对比款式。`);
     if (u.viewedSkus > 0) list.push(`【尺码跟进】她查看了 ${u.viewedSkus} 个商品，可以主动确认尺码并给出搭配建议。`);
     if (!list.length) list.push(`【初步接触】${base}，可以先做一次轻量触达，了解她的穿搭偏好。`);
@@ -470,7 +435,6 @@ const UserDetail = (() => {
   function render(u) {
     const signals = [];
     if (u.isHeatingUp) signals.push('<span class="pill pill-red">⚡ 正在升温</span>');
-    if (u.crosssellScore > 0) signals.push('<span class="pill pill-green">🛍 连带机会</span>');
 
     const suggestions = buildSuggestions(u).map((s, i) =>
       `<div class="suggest-item"><div class="s-label">建议 ${i + 1}</div><div class="s-text">${esc(s)}</div></div>`
@@ -488,10 +452,6 @@ const UserDetail = (() => {
         : '';
       return `<div class="tl-item"><div class="tl-time">${esc(t.formattedTime)}</div><div class="tl-event">${esc(t.event)}${t.eventMsg ? `<span class="tag">${esc(t.eventMsg)}</span>` : ''}</div>${extraStr}</div>`;
     }).join('') : '';
-
-    const csHTML = u.crosssellScore > 0
-      ? `<div class="cs-box"><div class="cs-amount">潜在金额 ¥${u.crosssellAmount.toLocaleString()}</div><div class="cs-reason">${esc((u.crosssellReasons || []).join(' · '))}</div><div style="margin-top:10px;"><button class="btn btn-sm btn-primary" data-action="gen">🎨 制作下一套穿搭</button></div></div>`
-      : '<div class="empty-state">暂无连带机会</div>';
 
     const fus = u.followUps || [];
     const fuHTML = fus.length ? fus.map((f) => {
@@ -537,8 +497,6 @@ const UserDetail = (() => {
         <div class="metric-card"><div class="mk">意向分 IntentScore</div><div class="mv hot">${u.score}</div><div class="md">Σ W×F×R</div></div>
         <div class="metric-card"><div class="mk">意向加速 Momentum</div><div class="mv">×${u.momentum}</div><div class="md">近 48h 活跃窗口</div></div>
         <div class="metric-card"><div class="mk">综合优先级</div><div class="mv">${u.priority}</div><div class="md">IntentScore × Momentum</div></div>
-        <div class="metric-card"><div class="mk">连带评分</div><div class="mv">${u.crosssellScore}</div><div class="md">Cross-sell Score</div></div>
-        <div class="metric-card"><div class="mk">潜在连带金额</div><div class="mv green">¥${(u.crosssellAmount || 0).toLocaleString()}</div><div class="md">预估连带销售</div></div>
       </div>
 
       <!-- 双栏 -->
@@ -557,10 +515,6 @@ const UserDetail = (() => {
           <div class="card" style="margin-bottom:20px;">
             <div class="card-title">💬 建议话术</div>
             ${suggestions}
-          </div>
-          <div class="card" style="margin-bottom:20px;">
-            <div class="card-title">🛍️ 连带销售机会</div>
-            ${csHTML}
           </div>
           <div class="card">
             <div class="card-title">📌 跟进记录</div>

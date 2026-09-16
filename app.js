@@ -178,9 +178,6 @@ function sanitizeUserForRole(u, role) {
   clone.viewedSkus = 0;            // 浏览商品数（L1 被动行为）不对 CA 暴露
   clone.behaviorCount = 0;         // 行为总数含被动行为，CA 不展示
   clone.scoreDetails = [];         // 评分明细含被动行为，CA 不展示
-  if (Array.isArray(clone.crosssellReasons)) {
-    clone.crosssellReasons = clone.crosssellReasons.filter(r => !/浏览|风格多次/.test(r));
-  }
   return clone;
 }
 
@@ -391,7 +388,7 @@ app.get('/api/behavior-log/:id', (req, res) => {
 
 /* ============ 销售工作台（Intent / Action Engine） ============ */
 
-// 用户意图列表（4 个 Tab：hot 今日重点 / followup 待跟进 / crosssell 连带机会 / all 全部会员）
+// 用户意图列表（3 个 Tab：hot 今日重点 / followup 待跟进 / all 全部会员）
 app.get('/api/intent/users', (req, res) => {
   const tab = req.query.tab || 'hot';
   const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -416,30 +413,24 @@ app.get('/api/intent/users', (req, res) => {
         case 'followup': // 待跟进：有 pending 任务
           list = list.filter(u => u.followUp);
           break;
-        case 'crosssell': // 连带机会：有连带评分
-          list = list.filter(u => u.crosssellScore >= 20);
-          break;
         case 'all':     // 全部会员
         default:
           break;
       }
 
-      const sortKey = tab === 'hot' ? 'priority' : (tab === 'crosssell' ? 'crosssellScore' : 'priority');
+      // 排序键：各 Tab 均按综合优先级排序
+      const sortKey = 'priority';
       list.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
 
       const total = list.length;
       const paged = list.slice((page - 1) * size, page * size);
 
-      // 汇总（顶部 6 个数字）
-      const now = Date.now();
-      const today0 = new Date(now); today0.setHours(0, 0, 0, 0);
+      // 汇总（顶部 4 个数字）
       const summary = {
         hotUsers: users.filter(u => u.isHeatingUp && u.priority >= 40).length,                    // 今日高意向
         pendingFollowUps: followUps.length,                                                        // 待跟进任务
-        crosssellTotal: users.reduce((a, u) => a + (u.crosssellAmount || 0), 0),                   // 连带机会金额
         contactedToday: 0,                                                                         // 已联系（由前端提交，暂为 0）
         weekConversionRate: 0,                                                                     // 本周转化
-        monthCrossSell: users.reduce((a, u) => a + (u.crosssellAmount || 0), 0),                   // 本月连带金额
       };
 
       res.json({ code: 0, data: { list: paged, total, page, size, tab, role, summary } });
@@ -458,13 +449,9 @@ app.get('/api/intent/action-summary', (req, res) => {
     const hot = users.filter(u => u.isHeatingUp).sort((a, b) => b.priority - a.priority)[0];
     // 2. 加速度最大的用户
     const rising = users.filter(u => u.momentum >= 1.5 && u.todayScore > 0).sort((a, b) => b.momentum - a.momentum)[0];
-    // 3. 连带机会金额最大
-    const cross = users.filter(u => u.crosssellAmount > 0).sort((a, b) => b.crosssellAmount - a.crosssellAmount)[0];
-
     const items = [];
     if (hot) items.push({ key: hot.key, text: `【${hot.displayName}】正在升温，今日意向分 ${hot.todayScore}，综合优先级 ${hot.priority}，建议立即联系。` });
     if (rising) items.push({ key: rising.key, text: `【${rising.displayName}】加速最快（Momentum ×${rising.momentum}），近几天从低分快速上升，适合主动推送穿搭。` });
-    if (cross) items.push({ key: cross.key, text: `【${cross.displayName}】存在连带机会，潜在金额约 ¥${cross.crosssellAmount.toLocaleString()}，可围绕现有兴趣整套推荐。` });
     if (!items.length) items.push({ key: '', text: '今日暂无重点用户，可在"全部会员"中浏览。' });
 
     res.json({ code: 0, data: { items, generatedAt: now } });
