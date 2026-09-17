@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const intentEngine = require('./intent-engine');
 const dataLevels = require('./data-levels');
+const createMpApi = require('./mp-api');
 
 const app = express();
 const PORT = 3000;
@@ -583,6 +584,10 @@ app.post('/api/consent', (req, res) => {
   });
 });
 
+/* ============ 小程序端 API（CA 视角，v1 无鉴权，角色服务端固定 ca） ============ */
+// 与 H5 接口并存，互不干扰；详见 doc/小程序接口文档.md
+app.use('/api/mp', createMpApi(db));
+
 /* ============ 页面 ============ */
 
 const sendHtml = (res, file, name) => {
@@ -639,6 +644,10 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   层级定义:     GET  /api/levels`);
   console.log(`   层级分布:     GET  /api/intent/level-stats`);
   console.log(`   用户授权:     GET/POST /api/consent`);
+  console.log(`   小程序概览:   GET  /api/mp/overview`);
+  console.log(`   小程序列表:   GET  /api/mp/users?tab=hot|followup|all`);
+  console.log(`   小程序详情:   GET  /api/mp/user/detail?key=`);
+  console.log(`   小程序跟进:   GET/POST /api/mp/follow-ups · POST /api/mp/follow-ups/:id/status · DELETE /api/mp/follow-ups/:id`);
   console.log(`   Dashboard:    GET  /userBehavior`);
   console.log(`   销售工作台:   GET  /sales            （单页应用 #/ 概览 · #/users 列表 · #/user?key= 详情）`);
   console.log(`   旧地址兼容:   GET  /sales/users 与 /sales/user 自动跳转 /sales`);
