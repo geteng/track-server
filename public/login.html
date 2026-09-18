@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 · airU 销售工作台</title>
+<link rel="stylesheet" href="/login.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-brand">
+      <span class="icon">👗</span>
+      <h1>airU 销售工作台</h1>
+      <p>使用 airU 老师账号登录 · 角色由合作方授权决定</p>
+    </div>
+
+    <div class="login-card">
+      <form id="loginForm" autocomplete="on">
+        <div class="field">
+          <label for="identifier">账号（手机号 / 用户名）</label>
+          <input id="identifier" name="identifier" type="text" placeholder="请输入 airU 账号" autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        <button class="login-btn" id="loginBtn" type="submit">登 录</button>
+      </form>
+      <div class="login-tip" id="loginTip"></div>
+
+      <div class="demo-box" id="demoBox">
+        <div class="demo-title" id="demoTitle">演示账号（点击自动填充）</div>
+        <div id="demoList"></div>
+      </div>
+    </div>
+
+    <div class="login-foot">
+      登录成功后角色固定，不可在页面内切换<br>
+      ca → CA/穿搭师 · admin → 开发者 · boss → 老板娘
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const form = $('loginForm');
+  const tip = $('loginTip');
+  const btn = $('loginBtn');
+  const identifierEl = $('identifier');
+  const passwordEl = $('password');
+
+  const params = new URLSearchParams(location.search);
+  const from = params.get('from') || '/sales';
+
+  function showTip(msg) {
+    tip.textContent = msg || '';
+    tip.classList.toggle('show', !!msg);
+  }
+
+  // 演示模式下把内置账号列出来，方便本地体验三种视角
+  fetch('/api/auth/config').then((r) => r.json()).then((json) => {
+    const cfg = (json && json.data) || {};
+    const accounts = cfg.demoAccounts || [];
+    if (!accounts.length) {
+      $('demoTitle').textContent = cfg.mode === 'upstream'
+        ? '当前对接 airU 正式登录服务'
+        : '登录未启用';
+      $('demoBox').classList.add('show');
+      return;
+    }
+    $('demoList').innerHTML = accounts.map((a) => `
+      <div class="demo-item" data-id="${a.identifier}" data-pw="${a.password}">
+        <div class="who">${a.identifier} / ${a.password}<small>${a.name}</small></div>
+        <span class="tag">${a.label}</span>
+      </div>`).join('');
+    $('demoBox').classList.add('show');
+    $('demoList').addEventListener('click', (e) => {
+      const item = e.target.closest('.demo-item');
+      if (!item) return;
+      identifierEl.value = item.dataset.id;
+      passwordEl.value = item.dataset.pw;
+      showTip('');
+      passwordEl.focus();
+    });
+  }).catch(() => {});
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const identifier = identifierEl.value.trim();
+    const password = passwordEl.value;
+    if (!identifier) return showTip('请输入账号');
+    if (!password) return showTip('请输入密码');
+
+    btn.disabled = true;
+    btn.textContent = '登录中…';
+    showTip('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: 'gtt-sales', identifier, password }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.code !== 0) {
+        showTip(json.msg || '登录失败，请重试');
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        return;
+      }
+      // 登录态由服务端 HttpOnly Cookie 维护，前端不保存 Token，也不决定角色
+      location.replace(from.startsWith('/') ? from : '/sales');
+    } catch (err) {
+      showTip('网络异常，请检查服务是否启动');
+      btn.disabled = false;
+      btn.textContent = '登 录';
+    }
+  });
+</script>
+</body>
+</html>

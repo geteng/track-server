@@ -8,12 +8,9 @@
 </head>
 <body>
 <script>
-  // 首屏即按角色锁定「行为日志」入口可见性，避免加载瞬间闪烁
-  (function () {
-    var r = localStorage.getItem('salesRole');
-    if (r !== 'developer' && r !== 'boss' && r !== 'ca') r = 'ca';
-    document.body.setAttribute('data-role', r);
-  })();
+  // 角色由服务端登录态下发（HttpOnly 会话，前端无法读取/修改），
+  // 首屏先按最小权限 CA 渲染，避免「行为日志」等开发者入口闪烁
+  document.body.setAttribute('data-role', 'ca');
 </script>
 
 <!-- ==================== 统一顶部导航（三个视图共用一个地址） ==================== -->
@@ -26,12 +23,12 @@
       <a href="/userBehavior" class="nav-mobile-hide dev-only">行为日志</a>
     </div>
     <div class="nav-right">
-      <div class="role-switch" id="roleSwitch">
-        <span class="role-caption">视角</span>
-        <button class="role-btn" data-role="developer">开发者</button>
-        <button class="role-btn" data-role="boss">老板娘</button>
-        <button class="role-btn active" data-role="ca">CA/穿搭师</button>
+      <div class="role-fixed" id="roleFixed" title="角色由合作方授权决定，登录后固定，不可切换">
+        <span class="role-caption">当前视角</span>
+        <span class="role-tag" id="roleTag">—</span>
+        <span class="user-name" id="userName"></span>
       </div>
+      <button class="logout-btn" id="logoutBtn">退出登录</button>
       <span id="nowText"></span>
     </div>
   </div>

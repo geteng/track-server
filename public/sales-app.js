@@ -3,14 +3,32 @@
    视图：今日概览 / 用户列表 / 用户详情（共用地址 /sales，靠 # 路由切换）
    ============================================================ */
 
-/* ================= 角色权限（开发者 > 老板娘 > 穿搭师/CA） ================= */
+/* ================= 角色权限（开发者 > 老板娘 > 穿搭师/CA） =================
+   角色不再由前端选择：登录后从 /api/auth/me 取得，由服务端会话（partner_access.role）决定 */
 const ROLE_META = {
   developer: { label: '开发者', scope: 'L0 - L3 全部层级 + 原始明细 + 调试信息', hint: '可见全部数据与上报调试面板' },
   boss: { label: '老板娘', scope: 'L0 - L3 全部层级（经营视角）', hint: '可见经营指标与全部层级数据' },
   ca: { label: '穿搭师 / CA', scope: '仅 L2 主动动作 + L3 兴趣画像', hint: '看不到用户逐条浏览（L0 / L1 被动行为）' },
 };
-let currentRole = localStorage.getItem('salesRole');
-if (!ROLE_META[currentRole]) currentRole = 'ca';
+// 登录前保持最小权限，登录后被会话角色覆盖
+let currentRole = 'ca';
+let currentUser = null;
+
+/* ================= 带登录态的请求 ================= */
+// 任何接口返回 401 都说明会话失效，直接回登录页，不在前端保留数据
+function apiFetch(url, options) {
+  return fetch(url, Object.assign({ credentials: 'same-origin' }, options || {})).then(async (r) => {
+    if (r.status === 401) {
+      location.replace(`/login?from=${encodeURIComponent(location.pathname + location.hash)}`);
+      throw new Error('未登录');
+    }
+    return r.json();
+  });
+}
+
+function toLogin() {
+  location.replace(`/login?from=${encodeURIComponent(location.pathname + location.hash)}`);
+}
 
 /* ================= 通用工具 ================= */
 const $ = (id) => document.getElementById(id);
@@ -57,7 +75,15 @@ window.addEventListener('hashchange', route);
 /* ================= 角色应用 ================= */
 function applyRole() {
   const meta = ROLE_META[currentRole];
-  document.querySelectorAll('.role-btn').forEach((b) => b.classList.toggle('active', b.dataset.role === currentRole));
+
+  // 顶部固定展示当前视角（登录后由服务端决定，页面内不可切换）
+  const tag = $('roleTag');
+  if (tag) {
+    tag.textContent = meta.label;
+    tag.setAttribute('data-role', currentRole);
+  }
+  const nameEl = $('userName');
+  if (nameEl) nameEl.textContent = currentUser ? (currentUser.name || '') : '';
 
   // 「行为日志」入口：仅开发者可见
   document.body.setAttribute('data-role', currentRole);
@@ -83,13 +109,12 @@ function applyRole() {
   if (levelSection) levelSection.style.display = currentRole === 'developer' ? '' : 'none';
 }
 
-$('roleSwitch').addEventListener('click', (e) => {
-  const btn = e.target.closest('.role-btn');
-  if (!btn) return;
-  currentRole = btn.dataset.role;
-  localStorage.setItem('salesRole', currentRole);
-  applyRole();
-  refreshCurrent();
+// 退出登录：清掉服务端 HttpOnly 会话后回到登录页
+$('logoutBtn').addEventListener('click', async () => {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch (e) { /* 忽略网络异常，仍然跳转 */ }
+  toLogin();
 });
 
 function refreshCurrent() {
@@ -148,12 +173,11 @@ $('fuSubmit').addEventListener('click', async () => {
     owner: $('fuOwner').value,
   };
   try {
-    const res = await fetch('/api/follow-ups', {
+    const json = await apiFetch('/api/follow-ups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const json = await res.json();
     if (json.code === 0) { closeMask('fuMask'); refreshCurrent(); }
     else alert(json.msg || '预约失败');
   } catch (err) { alert('预约失败：' + err.message); }
@@ -202,11 +226,12 @@ const Overview = (() => {
 
   async function refresh() {
     try {
+      // 不带 role 参数：角色由服务端登录会话决定
       const [hotRes, summaryRes, fuRes, levelRes] = await Promise.all([
-        fetch(`/api/intent/users?tab=hot&size=6&role=${currentRole}`).then((r) => r.json()),
-        fetch(`/api/intent/action-summary?role=${currentRole}`).then((r) => r.json()),
-        fetch('/api/follow-ups?status=all').then((r) => r.json()),
-        currentRole === 'developer' ? fetch('/api/intent/level-stats').then((r) => r.json()) : Promise.resolve({ data: null }),
+        apiFetch('/api/intent/users?tab=hot&size=6'),
+        apiFetch('/api/intent/action-summary'),
+        apiFetch('/api/follow-ups?status=all'),
+        currentRole === 'developer' ? apiFetch('/api/intent/level-stats') : Promise.resolve({ data: null }),
       ]);
 
       const hotList = hotRes.data.list || [];
@@ -317,12 +342,11 @@ const Users = (() => {
 
   async function refresh() {
     try {
-      const roleQ = `role=${currentRole}`;
       const [mainRes, hotRes, fuRes, allRes] = await Promise.all([
-        fetch(`/api/intent/users?tab=${curTab}&page=${curPage}&size=${PAGE_SIZE}&${roleQ}`).then((r) => r.json()),
-        fetch(`/api/intent/users?tab=hot&size=1&${roleQ}`).then((r) => r.json()),
-        fetch(`/api/intent/users?tab=followup&size=1&${roleQ}`).then((r) => r.json()),
-        fetch(`/api/intent/users?tab=all&size=1&${roleQ}`).then((r) => r.json()),
+        apiFetch(`/api/intent/users?tab=${curTab}&page=${curPage}&size=${PAGE_SIZE}`),
+        apiFetch('/api/intent/users?tab=hot&size=1'),
+        apiFetch('/api/intent/users?tab=followup&size=1'),
+        apiFetch('/api/intent/users?tab=all&size=1'),
       ]);
 
       $('cnt-hot').textContent = hotRes.data.total;
@@ -527,8 +551,7 @@ const UserDetail = (() => {
     if (!curKey) { openGate(); return; }
     $('userRoot').innerHTML = '<div class="loading"><div class="spinner"></div>加载用户数据…</div>';
     try {
-      const res = await fetch(`/api/intent/user?key=${encodeURIComponent(curKey)}&role=${currentRole}`);
-      const json = await res.json();
+      const json = await apiFetch(`/api/intent/user?key=${encodeURIComponent(curKey)}`);
       if (json.code !== 0 || !json.data) throw new Error(json.msg || '未找到用户');
       userData = json.data;
       render(json.data);
@@ -539,12 +562,11 @@ const UserDetail = (() => {
 
   async function setFuStatus(id, status) {
     try {
-      const res = await fetch(`/api/follow-ups/${id}/status`, {
+      const json = await apiFetch(`/api/follow-ups/${id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      const json = await res.json();
       if (json.code === 0) load(); else alert(json.msg || '操作失败');
     } catch (err) { alert('操作失败：' + err.message); }
   }
@@ -598,14 +620,30 @@ $('genSubmit').addEventListener('click', () => {
   $('genResult').innerHTML = `<div class="gen-result"><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">基于【${esc(u.displayName)}】的收藏/浏览偏好生成：</div>${looks.join('')}<div style="padding-top:8px;color:var(--text-muted);font-size:12px;">💡 可微调后通过企业微信发送给用户</div></div>`;
 });
 
-/* ================= 定时刷新（仅刷新当前视图） ================= */
-let tickCount = 0;
-setInterval(() => {
-  tickCount++;
-  if (currentView === 'overview') Overview.refresh();
-  else if (currentView === 'users' && tickCount % 2 === 0) Users.refresh();
-}, 30000);
+/* ================= 启动 =================
+   先确认登录会话，再按会话角色渲染；未登录直接进入登录页，不加载任何用户数据 */
+async function bootstrap() {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.code !== 0) return toLogin();
+    currentUser = json.data.user || null;
+    currentRole = json.data.role;
+    if (!ROLE_META[currentRole]) currentRole = 'ca';
+  } catch (err) {
+    return toLogin();
+  }
 
-/* ================= 启动 ================= */
-applyRole();
-route();
+  applyRole();
+  route();
+
+  // 定时刷新（仅刷新当前视图）
+  let tickCount = 0;
+  setInterval(() => {
+    tickCount++;
+    if (currentView === 'overview') Overview.refresh();
+    else if (currentView === 'users' && tickCount % 2 === 0) Users.refresh();
+  }, 30000);
+}
+
+bootstrap();

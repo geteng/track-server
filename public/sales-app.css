@@ -81,14 +81,22 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
 .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 12px; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ================= 角色切换 / 说明条 ================= */
-.role-switch { display: flex; align-items: center; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
-.role-switch .role-caption { font-size: 11px; color: var(--text-muted); padding: 0 6px 0 8px; white-space: nowrap; }
-.role-btn { border: none; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-.role-btn:hover { color: var(--text); }
-.role-btn.active { background: var(--card-bg); color: var(--primary); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
-.role-btn[data-role="developer"].active { color: #6D28D9; }
-.role-btn[data-role="boss"].active { color: var(--amber); }
+/* ================= 登录身份 / 角色说明条 =================
+   角色由服务端登录态决定，登录后固定展示，不再提供切换按钮 */
+.role-fixed { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 4px 10px; }
+.role-fixed .role-caption { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.role-fixed .role-tag { font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.role-fixed .role-tag[data-role="developer"] { color: #6D28D9; }
+.role-fixed .role-tag[data-role="boss"] { color: var(--amber); }
+.role-fixed .user-name { font-size: 11px; color: var(--text-muted); padding-left: 6px; border-left: 1px solid var(--border); white-space: nowrap; }
+.role-fixed .user-name:empty { display: none; }
+
+.logout-btn {
+  border: 1px solid var(--border-dark); background: var(--card-bg); color: var(--text-muted);
+  font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  white-space: nowrap; transition: all 0.2s;
+}
+.logout-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-light); }
 
 .role-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); background: var(--card-bg); border: 1px dashed var(--border-dark); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; line-height: 1.6; }
 .role-banner .lv { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 11px; }
@@ -306,8 +314,10 @@ body[data-role="developer"] .nav-links a.dev-only { display: block; }
   .nav-links a.nav-mobile-hide { display: none; }
   body[data-role="developer"] .nav-links a.dev-only { display: none; }
   .nav-right #nowText { display: none; }
-  .role-switch .role-caption { display: none; }
-  .role-switch .role-btn { padding: 5px 7px; font-size: 11px; }
+  .role-fixed { padding: 4px 8px; }
+  .role-fixed .role-caption, .role-fixed .user-name { display: none; }
+  .role-fixed .role-tag { font-size: 11px; }
+  .logout-btn { padding: 5px 9px; font-size: 11px; }
 
   /* ===== 通用 ===== */
   .view { padding: 14px 12px 32px; }

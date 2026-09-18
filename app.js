@@ -6,6 +6,7 @@ const fs = require('fs');
 const intentEngine = require('./intent-engine');
 const dataLevels = require('./data-levels');
 const createMpApi = require('./mp-api');
+const partnerAuth = require('./partner-auth');
 
 const app = express();
 const PORT = 3000;
@@ -20,6 +21,13 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} | ${req.method} | ${req.url} | ${req.ip}`);
   next();
 });
+
+/* ---- 登录态：解析 HttpOnly 会话 Cookie，挂到 req.session（未登录为 null） ---- */
+app.use(partnerAuth.attachSession);
+
+/* ---- 业务数据接口一律要求登录会话（埋点上报 /api/track 保持公开） ----
+   角色只来自登录态，不再读取 URL 上的 role 参数，避免越权 */
+app.use(['/api/intent', '/api/follow-ups', '/api/consent', '/api/behavior-log'], partnerAuth.requireAuth);
 
 /* ============ 初始化 SQLite ============ */
 const db = new sqlite3.Database('./track.db', (err) => {
@@ -166,10 +174,12 @@ function backfillLevels() {
   });
 }
 
-// 解析请求角色（Demo 由前端传参；生产环境必须来自登录态，禁止通过参数越权）
-function resolveRole(req, fallback) {
-  const role = (req.query && req.query.role) || (req.body && req.body.role) || fallback || dataLevels.DEFAULT_ROLE;
-  return dataLevels.ROLES[role] ? role : (fallback || dataLevels.DEFAULT_ROLE);
+// 解析请求角色：只信任登录态（由 partner_access.role 映射而来），
+// 不再读取 query / body 中的 role 参数，改 URL 无法扩大权限；
+// 这些接口已被 requireAuth 拦截，兜底取最小权限 CA
+function resolveRole(req) {
+  const role = req.session && req.session.role;
+  return dataLevels.ROLES[role] ? role : dataLevels.DEFAULT_ROLE;
 }
 
 // 按角色裁剪用户数据：CA 不可见被动行为（L1）派生的字段，只保留主动动作与结论
@@ -479,8 +489,8 @@ app.get('/api/intent/user', (req, res) => {
   });
 });
 
-// 数据层级分布（开发者视角：各层级上报量统计）
-app.get('/api/intent/level-stats', (req, res) => {
+// 数据层级分布（开发者视角：各层级上报量统计，其他角色 403）
+app.get('/api/intent/level-stats', partnerAuth.requirePermission('debug:read'), (req, res) => {
   db.all(`SELECT level, COUNT(*) AS count FROM behavior_log GROUP BY level`, [], (err, rows) => {
     if (err) return res.status(500).json({ code: -1, msg: err.message });
     const map = {};
@@ -588,6 +598,10 @@ app.post('/api/consent', (req, res) => {
 // 与 H5 接口并存，互不干扰；详见 doc/小程序接口文档.md
 app.use('/api/mp', createMpApi(db));
 
+/* ============ 登录（GTT 合作方 · airU 老师账号） ============ */
+// POST /api/auth/login · GET /api/auth/me · POST /api/auth/logout · GET /api/auth/config
+partnerAuth.registerAuthRoutes(app);
+
 /* ============ 页面 ============ */
 
 const sendHtml = (res, file, name) => {
@@ -611,20 +625,27 @@ app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 // 根路径：默认进入销售工作台
 app.get('/', (req, res) => res.redirect('/sales'));
 
-app.get('/userBehavior', (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
+// 登录页（未登录时的工作台入口）
+app.get('/login', (req, res) => {
+  // 已登录直接回到目标页
+  if (req.session) return res.redirect('/sales');
+  sendHtml(res, 'login.html', '登录');
+});
+
+app.get('/userBehavior', partnerAuth.requireLoginPage, (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
 
 /* ---- 销售工作台：单页应用 ----
    今日概览 / 用户列表 / 用户详情合并为一个页面，对外只暴露 /sales，
    三个视图通过 hash 路由切换：#/ 概览 · #/users 列表 · #/user?key= 详情 */
-app.get('/sales', (req, res) => sendHtml(res, 'sales-app.html', '销售工作台'));
+app.get('/sales', partnerAuth.requireLoginPage, (req, res) => sendHtml(res, 'sales-app.html', '销售工作台'));
 
 // 旧地址兼容：301 到单页应用的对应视图
-app.get('/sales/users', (req, res) => {
+app.get('/sales/users', partnerAuth.requireLoginPage, (req, res) => {
   const tab = req.query.tab ? `?tab=${encodeURIComponent(req.query.tab)}` : '';
   res.redirect(`/sales#/users${tab}`);
 });
 
-app.get('/sales/user', (req, res) => {
+app.get('/sales/user', partnerAuth.requireLoginPage, (req, res) => {
   const key = req.query.key ? `?key=${encodeURIComponent(req.query.key)}` : '';
   res.redirect(`/sales#/user${key}`);
 });
@@ -632,6 +653,9 @@ app.get('/sales/user', (req, res) => {
 /* ============ 启动 ============ */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ 埋点服务运行在 http://0.0.0.0:${PORT}`);
+  console.log(`   登录模式:     ${partnerAuth.CONFIG.enabled ? partnerAuth.CONFIG.mode + '（client_id=' + partnerAuth.CONFIG.clientId + '）' : '已关闭'}`);
+  console.log(`   登录接口:     POST /api/auth/login · GET /api/auth/me · POST /api/auth/logout`);
+  console.log(`   登录页:       GET  /login`);
   console.log(`   健康检查:     GET  /api/health`);
   console.log(`   埋点上报:     POST /api/track`);
   console.log(`   日志查询:     GET  /api/behavior-log/list`);
