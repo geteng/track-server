@@ -2,8 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>airU 销售工作台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>销售工作台</title>
 <link rel="stylesheet" href="/sales-app.css">
 </head>
 <body>
@@ -13,181 +14,240 @@
   document.body.setAttribute('data-role', 'ca');
 </script>
 
-<!-- ==================== 统一顶部导航（三个视图共用一个地址） ==================== -->
-<nav class="top-nav">
-  <div class="top-nav-inner">
-    <a class="logo" href="#/"><span class="icon">👗</span> airU 销售工作台</a>
-    <div class="nav-links">
-      <a href="#/" data-nav="overview">今日概览</a>
-      <a href="#/users" data-nav="users">用户列表</a>
-      <a href="/userBehavior" class="nav-mobile-hide dev-only">行为日志</a>
+<div class="app-shell">
+
+  <!-- ==================== 顶栏 ==================== -->
+  <header class="app-header">
+    <div class="hdr-left">
+      <div class="hdr-title" id="hdrTitle">销售工作台</div>
+      <div class="hdr-sub" id="hdrSub">—</div>
     </div>
-    <div class="nav-right">
-      <div class="role-fixed" id="roleFixed" title="角色由合作方授权决定，登录后固定，不可切换">
-        <span class="role-caption">当前视角</span>
-        <span class="role-tag" id="roleTag">—</span>
-        <span class="user-name" id="userName"></span>
+    <div class="hdr-right">
+      <span class="role-chip" id="roleChip" title="角色由合作方授权决定，登录后固定，不可切换">
+        <span class="role-dot"></span><span id="roleTag">—</span>
+      </span>
+      <button class="icon-btn" id="logoutBtn" aria-label="退出登录">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ==================== 概览 ==================== -->
+    <section class="view" id="view-overview">
+      <div class="greeting">
+        <div class="greet-hello" id="greetHello">你好</div>
+        <div class="greet-sub" id="greetSub">正在读取今日重点…</div>
       </div>
-      <button class="logout-btn" id="logoutBtn">退出登录</button>
-      <span id="nowText"></span>
+
+      <div class="metrics" id="metricsRow">
+        <button class="metric-card" data-route="#/users?tab=hot">
+          <span class="m-label">今日重点</span>
+          <span class="m-value" id="statHot">—</span>
+          <span class="delta-pill" id="statHotDelta">—</span>
+        </button>
+        <button class="metric-card" data-route="#/followups">
+          <span class="m-label">待跟进</span>
+          <span class="m-value" id="statFollowUp">—</span>
+          <span class="delta-pill" id="statFollowUpDelta">—</span>
+        </button>
+        <button class="metric-card" data-route="#/users?tab=all">
+          <span class="m-label">全部会员</span>
+          <span class="m-value" id="statAll">—</span>
+          <span class="delta-pill delta-muted" id="statAllDelta">会员总数</span>
+        </button>
+      </div>
+
+      <!-- AI 建议卡 -->
+      <div class="ai-card">
+        <div class="ai-head">
+          <span class="ai-ico">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M18 16.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
+          </span>
+          <span class="ai-title">今日行动建议</span>
+          <span class="ai-tag">AI</span>
+        </div>
+        <div class="ai-body" id="summaryList">
+          <div class="skeleton-line"></div><div class="skeleton-line short"></div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2>优先联系</h2>
+        <a class="link" href="#/users?tab=hot">查看全部</a>
+      </div>
+      <div class="client-list card" id="hotList">
+        <div class="skeleton-line"></div><div class="skeleton-line short"></div>
+      </div>
+
+      <div class="section dev-only">
+        <div class="section-head"><h2>数据层级分布</h2><span class="link muted">开发者视角</span></div>
+        <div class="level-grid" id="levelGrid"></div>
+      </div>
+    </section>
+
+    <!-- ==================== 客户列表 ==================== -->
+    <section class="view" id="view-users">
+      <div class="search-bar">
+        <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="searchInput" type="search" placeholder="搜索客户昵称" autocomplete="off">
+      </div>
+
+      <div class="segment" id="userTabs">
+        <button class="seg" data-tab="hot">今日重点<span class="cnt" id="cnt-hot">-</span></button>
+        <button class="seg" data-tab="followup">待跟进<span class="cnt" id="cnt-followup">-</span></button>
+        <button class="seg" data-tab="all">全部会员<span class="cnt" id="cnt-all">-</span></button>
+      </div>
+
+      <div class="client-list card" id="userList">
+        <div class="skeleton-line"></div><div class="skeleton-line short"></div>
+      </div>
+
+      <div class="list-foot">
+        <div class="page-info" id="pageInfo"></div>
+        <button class="btn-ghost" id="loadMore" style="display:none;">加载更多</button>
+      </div>
+    </section>
+
+    <!-- ==================== 跟进 ==================== -->
+    <section class="view" id="view-followups">
+      <div class="section-head"><h2>跟进任务</h2><span class="link muted" id="fuSummary"></span></div>
+      <div id="fuList" class="stack"></div>
+    </section>
+
+    <!-- ==================== 用户详情 ==================== -->
+    <section class="view" id="view-user">
+      <div id="userRoot"></div>
+    </section>
+
+    <!-- ==================== 我的 ==================== -->
+    <section class="view" id="view-me">
+      <div class="profile card">
+        <div class="avatar-lg" id="meAvatar">—</div>
+        <div class="pf-info">
+          <div class="pf-name" id="meName">—</div>
+          <div class="pf-role" id="meRole">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">数据可见范围</div>
+        <div class="kv" id="meScope">—</div>
+        <div class="kv muted" id="meHint">—</div>
+      </div>
+
+      <div class="card dev-only">
+        <div class="card-title">开发者工具</div>
+        <a class="row-link" href="/userBehavior">行为日志 →</a>
+      </div>
+
+      <button class="btn-primary block" id="logoutBtn2">退出登录</button>
+      <div class="foot-note">airU 销售工作台 · 数据每小时自动刷新</div>
+    </section>
+
+  </main>
+
+  <!-- ==================== 底部导航 ==================== -->
+  <nav class="tabbar">
+    <a class="tab" href="#/" data-nav="overview">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+      <span>概览</span>
+    </a>
+    <a class="tab" href="#/users" data-nav="users">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.5 5.5a3 3 0 0 1 0 6"/><path d="M18 19c0-2.2-.8-3.8-2-4.8"/></svg>
+      <span>客户</span>
+    </a>
+    <a class="tab" href="#/followups" data-nav="followups">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9 14.5l2 2 4-4"/></svg>
+      <span>跟进</span>
+    </a>
+    <a class="tab" href="#/me" data-nav="me">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg>
+      <span>我的</span>
+    </a>
+  </nav>
+</div>
+
+<!-- ==================== 底部弹层：预约跟进 ==================== -->
+<div class="sheet-mask" id="fuMask">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h3>预约跟进</h3>
+      <button class="icon-btn" data-close="fuMask" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
-  </div>
-</nav>
-
-<!-- ==================== 视图一：今日概览 ==================== -->
-<section class="view" id="view-overview">
-  <div class="page-title" id="pageTitle">今日概览</div>
-  <div class="page-sub">把海量用户行为压缩成三件事：谁最值得今天跟进、为什么值得、下一步该做什么。</div>
-  <div class="role-banner" id="roleBanner"></div>
-
-  <!-- 4 个数字 -->
-  <div class="stats-row" id="statsRow">
-    <div class="stat-card" data-route="#/users?tab=hot"><div class="icon-badge bg-blue">🔥</div><div class="label">今日高意向用户</div><div class="value" id="statHot">—</div><div class="detail" id="statHotDetail"></div></div>
-    <div class="stat-card" data-route="#/users?tab=followup"><div class="icon-badge bg-amber">📌</div><div class="label">待跟进任务</div><div class="value" id="statFollowUp">—</div><div class="detail" id="statFollowUpDetail"></div></div>
-    <div class="stat-card" id="statConversionCard" data-route="#/users?tab=all"><div class="icon-badge bg-pink">📈</div><div class="label">本周转化率</div><div class="value" id="statConversion">—</div><div class="detail">待接入订单数据</div></div>
-  </div>
-
-  <!-- 今日行动摘要 -->
-  <div class="summary-card">
-    <div class="card-title">🤖 今日行动摘要 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">自动生成 · 每天最重要的 3 件事</span></div>
-    <div id="summaryList">
-      <div class="loading"><div class="spinner"></div>正在计算意图引擎…</div>
-    </div>
-  </div>
-
-  <!-- 今日重点 -->
-  <div class="section">
-    <div class="section-head">
-      <h2>🔥 今日重点 <span id="hotCount" style="font-size:12px;color:var(--text-muted);font-weight:400;"></span></h2>
-      <a class="more" href="#/users?tab=hot">查看全部 →</a>
-    </div>
-    <div class="user-grid" id="hotGrid">
-      <div class="loading"><div class="spinner"></div>加载中…</div>
-    </div>
-  </div>
-
-  <!-- 数据层级分布（开发者视角） -->
-  <div class="section" id="levelSection" style="display:none;">
-    <div class="section-head">
-      <h2>🧩 数据层级分布 <span style="font-size:12px;color:var(--text-muted);font-weight:400;">开发者视角 · 依据《用户行为追踪边界规范》分层统计上报量</span></h2>
-    </div>
-    <div class="level-grid" id="levelGrid">
-      <div class="loading"><div class="spinner"></div>加载中…</div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== 视图二：用户列表 ==================== -->
-<section class="view" id="view-users">
-  <div class="page-title">高意向用户列表</div>
-  <div class="page-sub">按 Priority = IntentScore × Momentum 排序，优先跟进正在升温的用户。</div>
-
-  <div class="tabs" id="userTabs">
-    <button class="tab" data-tab="hot">🔥 今日重点<span class="count" id="cnt-hot">-</span></button>
-    <button class="tab" data-tab="followup">📌 待跟进<span class="count" id="cnt-followup">-</span></button>
-    <button class="tab" data-tab="all">👥 全部会员<span class="count" id="cnt-all">-</span></button>
-  </div>
-
-  <div class="table-section">
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>用户</th>
-            <th class="col-hide-mobile">意向分</th>
-            <th class="col-hide-mobile">加速 ×</th>
-            <th class="col-hide-mobile">优先级</th>
-            <th>今日信号</th>
-            <th class="col-hide-mobile">行为数</th>
-            <th class="col-hide-mobile">跟进状态</th>
-            <th style="min-width:130px;">操作</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="8"><div class="loading"><div class="spinner"></div>加载中…</div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="pagination">
-      <div class="page-info" id="pageInfo"></div>
-      <div class="page-btns">
-        <button class="btn btn-outline" data-page="-1">← 上一页</button>
-        <button class="btn btn-outline" data-page="1">下一页 →</button>
+    <div class="sheet-body">
+      <div class="sheet-target" id="fuTarget"></div>
+      <div class="field">
+        <label>负责跟进人</label>
+        <select id="fuOwner">
+          <option value="">请选择</option>
+          <option value="小林">小林</option>
+          <option value="小付">小付</option>
+          <option value="小陈">小陈</option>
+          <option value="小葛">小葛</option>
+          <option value="林老师">林老师</option>
+          <option value="赵老师">赵老师</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>跟进时间</label>
+        <select id="fuPlanTime">
+          <option value="今天下午">今天下午</option>
+          <option value="明天上午">明天上午</option>
+          <option value="明天下午">明天下午</option>
+          <option value="后天">后天</option>
+          <option value="本周内">本周内</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>跟进内容 / 备注</label>
+        <textarea id="fuNote" rows="3" placeholder="例如：围绕她收藏的西装整套推荐"></textarea>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ==================== 视图三：用户详情 ==================== -->
-<section class="view" id="view-user">
-  <div id="userRoot">
-    <div class="loading"><div class="spinner"></div>加载用户数据…</div>
-  </div>
-</section>
-
-<!-- ==================== 弹窗：预约跟进（列表 / 详情共用） ==================== -->
-<div class="modal-mask" id="fuMask">
-  <div class="modal">
-    <h3>📌 预约跟进</h3>
-    <div id="fuTarget" style="font-size:12px;color:var(--text-muted);margin:-8px 0 14px;"></div>
-    <div class="form-item">
-      <label>负责跟进人</label>
-      <select id="fuOwner">
-        <option value="">请选择</option>
-        <option value="小林">小林</option>
-        <option value="小付">小付</option>
-        <option value="小陈">小陈</option>
-        <option value="小葛">小葛</option>
-        <option value="林老师">林老师</option>
-        <option value="赵老师">赵老师</option>
-      </select>
-    </div>
-    <div class="form-item">
-      <label>跟进时间</label>
-      <select id="fuPlanTime">
-        <option value="今天下午">今天下午</option>
-        <option value="明天上午">明天上午</option>
-        <option value="明天下午">明天下午</option>
-        <option value="后天">后天</option>
-        <option value="本周内">本周内</option>
-      </select>
-    </div>
-    <div class="form-item">
-      <label>跟进内容 / 备注</label>
-      <textarea id="fuNote" rows="3" placeholder="例如：围绕她收藏的西装整套推荐"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" data-close="fuMask">取消</button>
-      <button class="btn btn-primary" id="fuSubmit">确认预约</button>
+    <div class="sheet-foot">
+      <button class="btn-ghost" data-close="fuMask">取消</button>
+      <button class="btn-primary grow" id="fuSubmit">确认预约</button>
     </div>
   </div>
 </div>
 
-<!-- ==================== 弹窗：生成穿搭（详情专属） ==================== -->
-<div class="modal-mask" id="genMask">
-  <div class="modal">
-    <h3>🎨 制作下一套穿搭</h3>
-    <div class="form-item">
-      <label>穿搭主题</label>
-      <select id="genStyle">
-        <option value="通勤">通勤</option>
-        <option value="休闲">休闲</option>
-        <option value="约会">约会</option>
-        <option value="度假">度假</option>
-        <option value="根据用户偏好">根据用户偏好</option>
-      </select>
+<!-- ==================== 底部弹层：生成穿搭 ==================== -->
+<div class="sheet-mask" id="genMask">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h3>制作下一套穿搭</h3>
+      <button class="icon-btn" data-close="genMask" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
-    <div class="form-item">
-      <label>数量</label>
-      <select id="genCount">
-        <option value="2">2 套</option>
-        <option value="3" selected>3 套</option>
-      </select>
+    <div class="sheet-body">
+      <div class="field">
+        <label>穿搭主题</label>
+        <select id="genStyle">
+          <option value="通勤">通勤</option>
+          <option value="休闲">休闲</option>
+          <option value="约会">约会</option>
+          <option value="度假">度假</option>
+          <option value="根据用户偏好">根据用户偏好</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>数量</label>
+        <select id="genCount">
+          <option value="2">2 套</option>
+          <option value="3" selected>3 套</option>
+        </select>
+      </div>
+      <div id="genResult"></div>
     </div>
-    <button class="btn btn-green btn-block" id="genSubmit">✨ 生成搭配</button>
-    <div id="genResult"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" data-close="genMask">关闭</button>
+    <div class="sheet-foot">
+      <button class="btn-ghost" data-close="genMask">关闭</button>
+      <button class="btn-primary grow" id="genSubmit">生成搭配</button>
     </div>
   </div>
 </div>

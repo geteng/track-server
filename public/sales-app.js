@@ -1,6 +1,6 @@
 /* ============================================================
    airU 销售工作台 · 单页应用脚本
-   视图：今日概览 / 用户列表 / 用户详情（共用地址 /sales，靠 # 路由切换）
+   视图：概览 / 客户 / 跟进 / 详情 / 我的（共用地址 /sales，靠 # 路由切换）
    ============================================================ */
 
 /* ================= 角色权限（开发者 > 老板娘 > 穿搭师/CA） =================
@@ -15,7 +15,6 @@ let currentRole = 'ca';
 let currentUser = null;
 
 /* ================= 带登录态的请求 ================= */
-// 任何接口返回 401 都说明会话失效，直接回登录页，不在前端保留数据
 function apiFetch(url, options) {
   return fetch(url, Object.assign({ credentials: 'same-origin' }, options || {})).then(async (r) => {
     if (r.status === 401) {
@@ -36,8 +35,25 @@ const pad2 = (x) => String(x).padStart(2, '0');
 const fmtDateTime = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 const fmtFullTime = (ts) => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const relTime = (ts) => {
+  if (!ts) return '—';
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.floor(h / 24)} 天前`;
+};
+const greetWord = () => {
+  const h = new Date().getHours();
+  if (h < 6) return '夜深了';
+  if (h < 11) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  return '晚上好';
+};
 
-// 视图间跳转（只改 # 片段，主路径永远是 /sales）
 const go = (hash) => { if (location.hash === hash) route(); else location.hash = hash; };
 
 /* ================= 路由 ================= */
@@ -50,8 +66,18 @@ function parseHash() {
   const query = new URLSearchParams(qi >= 0 ? raw.slice(qi + 1) : '');
   if (path === '/users') return { view: 'users', query };
   if (path === '/user') return { view: 'user', query };
+  if (path === '/followups') return { view: 'followups', query };
+  if (path === '/me') return { view: 'me', query };
   return { view: 'overview', query };
 }
+
+const VIEW_TITLE = {
+  overview: '销售工作台',
+  users: '客户列表',
+  user: '客户详情',
+  followups: '跟进任务',
+  me: '我的',
+};
 
 function route() {
   const { view, query } = parseHash();
@@ -59,92 +85,74 @@ function route() {
 
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
 
-  // 导航高亮：详情归属「用户列表」
+  // 底部导航高亮：详情归属「客户」
   const navActive = view === 'user' ? 'users' : view;
-  document.querySelectorAll('.nav-links a[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navActive));
+  document.querySelectorAll('.tabbar .tab').forEach((a) => a.classList.toggle('active', a.dataset.nav === navActive));
+
+  $('hdrTitle').textContent = VIEW_TITLE[view] || '销售工作台';
 
   window.scrollTo(0, 0);
 
   if (view === 'overview') Overview.activate();
   else if (view === 'users') Users.activate(query.get('tab'));
-  else UserDetail.activate(query.get('key'));
+  else if (view === 'user') UserDetail.activate(query.get('key'));
+  else if (view === 'followups') FollowUps.activate();
+  else if (view === 'me') applyRole();
 }
 
 window.addEventListener('hashchange', route);
 
 /* ================= 角色应用 ================= */
 function applyRole() {
-  const meta = ROLE_META[currentRole];
-
-  // 顶部固定展示当前视角（登录后由服务端决定，页面内不可切换）
-  const tag = $('roleTag');
-  if (tag) {
-    tag.textContent = meta.label;
-    tag.setAttribute('data-role', currentRole);
-  }
-  const nameEl = $('userName');
-  if (nameEl) nameEl.textContent = currentUser ? (currentUser.name || '') : '';
-
-  // 「行为日志」入口：仅开发者可见
+  const meta = ROLE_META[currentRole] || ROLE_META.ca;
   document.body.setAttribute('data-role', currentRole);
 
-  // 概览视图的角色文案（切换到其他视图时元素仍存在，无需判空）
-  const title = $('pageTitle');
-  if (title) {
-    title.textContent = currentRole === 'ca' ? '穿搭师工作台 · 今日概览'
-      : (currentRole === 'boss' ? '店长今日概览' : '开发者今日概览');
+  $('roleTag').textContent = meta.label;
+  $('hdrSub').textContent = currentUser ? `${currentUser.name || ''} · ${fmtDateTime(Date.now())}` : fmtDateTime(Date.now());
+
+  const hello = $('greetHello');
+  if (hello) hello.textContent = `${greetWord()}${currentUser && currentUser.name ? '，' + currentUser.name : ''}`;
+
+  const meAvatar = $('meAvatar');
+  if (meAvatar) {
+    meAvatar.textContent = (currentUser && currentUser.name ? currentUser.name[0] : '—');
+    $('meName').textContent = (currentUser && currentUser.name) || '未登录';
+    $('meRole').textContent = meta.label;
+    $('meScope').textContent = `可见数据：${meta.scope}`;
+    $('meHint').textContent = meta.hint;
   }
-  const banner = $('roleBanner');
-  if (banner) banner.innerHTML = `<span class="lv">当前视角：${meta.label}</span> 可见数据：<b>${meta.scope}</b> · ${meta.hint}`;
-
-  // 经营指标（仅开发者 / 老板娘可见）
-  const bizVisible = currentRole !== 'ca';
-  const convCard = $('statConversionCard');
-  if (convCard) convCard.style.display = bizVisible ? '' : 'none';
-  const statsRow = $('statsRow');
-  if (statsRow) statsRow.classList.toggle('cols-2', !bizVisible);
-
-  // 开发者专属调试面板
-  const levelSection = $('levelSection');
-  if (levelSection) levelSection.style.display = currentRole === 'developer' ? '' : 'none';
 }
 
-// 退出登录：清掉服务端 HttpOnly 会话后回到登录页
-$('logoutBtn').addEventListener('click', async () => {
-  try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
-  } catch (e) { /* 忽略网络异常，仍然跳转 */ }
+async function logout() {
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) { /* 忽略 */ }
   toLogin();
-});
+}
+$('logoutBtn').addEventListener('click', logout);
+$('logoutBtn2').addEventListener('click', logout);
 
 function refreshCurrent() {
   if (currentView === 'overview') Overview.refresh();
   else if (currentView === 'users') Users.refresh();
   else if (currentView === 'user') UserDetail.refresh();
+  else if (currentView === 'followups') FollowUps.refresh();
 }
 
-/* ================= 时钟 ================= */
-function tick() {
-  const t = $('nowText');
-  if (t) t.textContent = fmtDateTime(Date.now());
-}
-setInterval(tick, 1000);
-tick();
+setInterval(() => { if (currentView !== 'user') $('hdrSub').textContent = (currentUser ? currentUser.name + ' · ' : '') + fmtDateTime(Date.now()); }, 30000);
 
-/* ================= 弹窗通用行为 ================= */
-function openMask(id) { $(id).classList.add('show'); }
-function closeMask(id) { $(id).classList.remove('show'); }
+/* ================= 弹层通用行为 ================= */
+function openMask(id) { $(id).classList.add('show'); document.body.style.overflow = 'hidden'; }
+function closeMask(id) { $(id).classList.remove('show'); document.body.style.overflow = ''; }
 
-document.querySelectorAll('.modal-mask').forEach((mask) => {
+document.querySelectorAll('.sheet-mask').forEach((mask) => {
   mask.addEventListener('click', (e) => {
-    if (e.target === mask || e.target.dataset.close === mask.id) mask.classList.remove('show');
+    if (e.target === mask || e.target.dataset.close === mask.id) closeMask(mask.id);
   });
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-mask.show').forEach((m) => m.classList.remove('show'));
+  if (e.key === 'Escape') document.querySelectorAll('.sheet-mask.show').forEach((m) => closeMask(m.id));
 });
 
-/* ================= 全局路由委托（磁贴 / 卡片 / 链接） ================= */
+/* ================= 全局路由委托 ================= */
 document.addEventListener('click', (e) => {
   const routeEl = e.target.closest('[data-route]');
   if (routeEl) { e.preventDefault(); go(routeEl.dataset.route); return; }
@@ -152,12 +160,12 @@ document.addEventListener('click', (e) => {
   if (link) { e.preventDefault(); go(link.getAttribute('href')); }
 });
 
-/* ================= 预约跟进（列表 / 详情共用弹窗） ================= */
+/* ================= 预约跟进（列表 / 详情共用弹层） ================= */
 let fuTarget = null;
 
 function openFollowUp(key, name) {
   fuTarget = { key, name };
-  $('fuTarget').textContent = name ? `用户：${name}` : '';
+  $('fuTarget').textContent = name ? `客户：${name}` : '';
   $('fuOwner').value = '';
   $('fuNote').value = '';
   openMask('fuMask');
@@ -183,161 +191,136 @@ $('fuSubmit').addEventListener('click', async () => {
   } catch (err) { alert('预约失败：' + err.message); }
 });
 
+/* ================= 变化胶囊（分数动量） ================= */
+function deltaPill(value, suffix) {
+  const v = Math.round(value || 0);
+  const cls = v > 0 ? 'up' : (v < 0 ? 'down' : 'muted');
+  const sign = v > 0 ? '+' : '';
+  return `<span class="delta-pill ${cls}">${sign}${v}${suffix || ''}</span>`;
+}
+
+function clientRow(u, opts) {
+  const href = `#/user?key=${encodeURIComponent(u.key)}`;
+  const action = (opts && opts.action) || '';
+  const subBits = [];
+  subBits.push(`最近活跃 <b>${relTime(u.lastActive)}</b>`);
+  if (u.behaviorCount) subBits.push(`<b>${u.behaviorCount}</b> 次行为`);
+  if (u.followUp && u.followUp.plan_time) subBits.push(`📌 ${esc(u.followUp.plan_time)}`);
+
+  return `<div class="client-row" data-route="${href}" data-key="${esc(u.key)}" data-name="${esc(u.displayName)}">
+    <div class="avatar">${esc((u.displayName || '?')[0])}</div>
+    <div class="cr-main">
+      <div class="cr-name">${esc(u.displayName)}${u.isHeatingUp ? '<span class="tag">升温</span>' : ''}</div>
+      <div class="cr-sub">${subBits.join(' · ')}</div>
+    </div>
+    <div class="cr-right">
+      <div class="cr-score">${u.priority}<small>优先级</small></div>
+      ${deltaPill(u.todayScore, ' 分')}
+    </div>
+    ${action}
+  </div>`;
+}
+
 /* ============================================================
-   视图一：今日概览
+   视图一：概览
    ============================================================ */
 const Overview = (() => {
   let loaded = false;
 
-  function scoreBadge(p) {
-    if (p >= 100) return '<span class="score-badge score-hot">🔥 高意向</span>';
-    if (p >= 60) return '<span class="score-badge score-warm">高意向</span>';
-    return '';
-  }
-
-  function userCardHTML(u) {
-    const signals = [];
-    if (u.isHeatingUp) signals.push('<span class="signal-tag key">⚡ 正在升温</span>');
-    if (u.collectedLooks > 0) signals.push(`<span class="signal-tag">收藏 ${u.collectedLooks}</span>`);
-    if (u.viewedSkus > 0) signals.push(`<span class="signal-tag">浏览商品 ${u.viewedSkus}</span>`);
-    if (!signals.length) signals.push('<span class="signal-tag">近 48h 活跃</span>');
-
-    const routeTo = `#/user?key=${encodeURIComponent(u.key)}`;
-    return `<div class="user-card" data-route="${routeTo}">
-      ${scoreBadge(u.priority)}
-      <div class="u-head">
-        <div class="avatar">${esc(u.displayName[0])}</div>
-        <div>
-          <div class="u-name">${esc(u.displayName)}</div>
-          <div class="u-score">${esc(u.aid || '—')}${u.behaviorCount ? ' · ' + u.behaviorCount + ' 次行为' : ''}</div>
-        </div>
-      </div>
-      <div class="signals">${signals.join('')}</div>
-      <div class="u-metrics">
-        <div class="m"><div class="v" style="color:var(--primary)">${u.score}</div><div class="k">意向分</div></div>
-        <div class="m"><div class="v">×${u.momentum}</div><div class="k">加速</div></div>
-        <div class="m"><div class="v" style="color:var(--red)">${u.priority}</div><div class="k">优先级</div></div>
-      </div>
-      <div class="u-actions">
-        <button class="btn btn-primary btn-sm" data-route="${routeTo}">查看工作台</button>
-      </div>
-    </div>`;
-  }
-
   async function refresh() {
     try {
-      // 不带 role 参数：角色由服务端登录会话决定
-      const [hotRes, summaryRes, fuRes, levelRes] = await Promise.all([
+      const [hotRes, summaryRes, fuRes, allRes, levelRes] = await Promise.all([
         apiFetch('/api/intent/users?tab=hot&size=6'),
         apiFetch('/api/intent/action-summary'),
         apiFetch('/api/follow-ups?status=all'),
+        apiFetch('/api/intent/users?tab=all&size=1'),
         currentRole === 'developer' ? apiFetch('/api/intent/level-stats') : Promise.resolve({ data: null }),
       ]);
 
       const hotList = hotRes.data.list || [];
       const summary = hotRes.data.summary || {};
       const followUps = fuRes.data || [];
-
-      // 3 个数字磁贴
-      $('statHot').textContent = summary.hotUsers ?? hotList.length;
-      $('statHotDetail').innerHTML = hotList.length ? `Top: <span>${esc(hotList[0].displayName)}</span>（优先级 ${hotList[0].priority}）` : '';
-      $('statFollowUp').textContent = summary.pendingFollowUps ?? followUps.filter((f) => f.status === 'pending').length;
       const pending = followUps.filter((f) => f.status === 'pending');
-      $('statFollowUpDetail').innerHTML = pending.length ? `最近: <span>${esc(pending[0].display_name)}</span>` : '';
-      $('statConversion').innerHTML = '—';
 
-      // 今日行动摘要
+      $('statHot').textContent = summary.hotUsers ?? hotList.length;
+      const hotDelta = $('statHotDelta');
+      hotDelta.className = 'delta-pill up';
+      hotDelta.textContent = `Top ${hotList[0] ? hotList[0].displayName : '—'}`;
+      $('statFollowUp').textContent = pending.length;
+      const fuDelta = $('statFollowUpDelta');
+      fuDelta.className = 'delta-pill ' + (pending.length ? 'warn' : 'muted');
+      fuDelta.textContent = pending.length ? '待处理' : '已清空';
+      $('statAll').textContent = (allRes.data && allRes.data.total) || '—';
+
+      $('greetSub').textContent = hotList.length
+        ? `今天有 ${summary.hotUsers ?? hotList.length} 位客户值得优先联系，最高优先级 ${hotList[0].priority}`
+        : '今天暂时没有升温中的客户，可以去「全部会员」里找找';
+
+      // AI 建议
       const items = summaryRes.data.items || [];
       $('summaryList').innerHTML = items.length
-        ? items.map((it, i) => {
+        ? items.slice(0, 3).map((it, i) => {
             const href = it.key ? `#/user?key=${encodeURIComponent(it.key)}` : '#/users?tab=all';
-            return `<a class="summary-item" href="${href}"><div class="num">${i + 1}</div><div class="text">${it.text}</div></a>`;
+            return `<div class="ai-item" data-route="${href}">
+              <div class="ai-num">${i + 1}</div>
+              <div class="ai-text">${esc(it.text)}</div>
+              <div class="ai-go">›</div>
+            </div>`;
           }).join('')
-        : '<div class="empty-state">暂无摘要</div>';
+        : '<div class="empty">暂无建议，先看看客户列表</div>';
 
-      // 今日重点
-      $('hotCount').textContent = `共 ${hotRes.data.total} 位`;
-      $('hotGrid').innerHTML = hotList.length
-        ? hotList.map(userCardHTML).join('')
-        : '<div class="empty-state">当前没有正在升温的高意向用户<br>可在「全部会员」中浏览</div>';
+      // 优先联系
+      $('hotList').innerHTML = hotList.length
+        ? hotList.map((u) => clientRow(u)).join('')
+        : '<div class="empty">当前没有正在升温的高意向客户<br>可在「全部会员」中浏览</div>';
 
-      // 数据层级分布（开发者视角）
+      // 数据层级分布（开发者）
       if (currentRole === 'developer' && levelRes && levelRes.data) {
         $('levelGrid').innerHTML = levelRes.data.stats.map((s) => `
           <div class="level-card">
-            <span class="lv-code lv-${s.code}">${s.code}</span>
+            <span class="lv-code">${s.code}</span>
             <div class="lv-name">${esc(s.name)}</div>
             <div class="lv-desc">${esc(s.desc)}</div>
             <div class="lv-count">${Number(s.count || 0).toLocaleString()} <small>条</small></div>
-            <div class="lv-flag">CA 可见：${s.caVisible ? '<span class="yes">是</span>' : '<span class="no">否</span>'}${s.needConsent ? ' · 需用户授权' : ''}</div>
+            <div class="lv-flag">CA 可见：${s.caVisible ? '是' : '否'}${s.needConsent ? ' · 需授权' : ''}</div>
           </div>`).join('');
       }
     } catch (err) {
       console.error(err);
-      $('summaryList').innerHTML = '<div class="empty-state">加载失败：' + esc(err.message) + '</div>';
+      $('summaryList').innerHTML = '<div class="empty">加载失败：' + esc(err.message) + '</div>';
     }
   }
 
-  function activate() {
-    if (!loaded) { loaded = true; refresh(); }
-  }
-
+  function activate() { if (!loaded) { loaded = true; refresh(); } }
   return { activate, refresh };
 })();
 
 /* ============================================================
-   视图二：用户列表
+   视图二：客户列表
    ============================================================ */
 const Users = (() => {
   const TAB_META = { hot: '今日重点', followup: '待跟进', all: '全部会员' };
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 30;
   let curTab = 'hot';
   let curPage = 1;
+  let hasMore = false;
+  let cache = [];
 
-  function renderTabs() {
-    document.querySelectorAll('#userTabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === curTab));
+  function renderSeg() {
+    document.querySelectorAll('#userTabs .seg').forEach((t) => t.classList.toggle('active', t.dataset.tab === curTab));
   }
 
-  function pill(p) {
-    if (p >= 100) return `<span class="pill pill-red">🔥 ${p}</span>`;
-    if (p >= 60) return `<span class="pill pill-amber">${p}</span>`;
-    if (p >= 30) return `<span class="pill pill-blue">${p}</span>`;
-    return `<span class="pill pill-gray">${p}</span>`;
-  }
-
-  function rowHTML(u) {
-    const signals = [];
-    if (u.isHeatingUp) signals.push('<span class="pill pill-red">⚡ 升温</span>');
-    if (u.todayScore > 0) signals.push(`<span class="pill pill-blue">近48h ${Math.round(u.todayScore)}分</span>`);
-    if (!signals.length) signals.push('<span class="pill pill-gray">—</span>');
-
-    const fu = u.followUp
-      ? `<span class="fu-tag">📌 ${esc(u.followUp.plan_time)}</span>`
-      : '<span class="pill pill-gray">未预约</span>';
-
-    return `<tr data-key="${esc(u.key)}" data-name="${esc(u.displayName)}">
-      <td>
-        <div class="user-cell">
-          <div class="avatar-sm">${esc(u.displayName[0])}</div>
-          <div class="u">
-            <span class="u-name">${esc(u.displayName)}</span>
-            <span class="u-id">${esc((u.uid || u.aid || '').slice(0, 16))}</span>
-          </div>
-        </div>
-      </td>
-      <td class="col-hide-mobile">${u.score}</td>
-      <td class="col-hide-mobile">×${u.momentum}</td>
-      <td class="col-hide-mobile"><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
-      <td>${signals.join('')}</td>
-      <td class="col-hide-mobile">${u.behaviorCount}</td>
-      <td class="col-hide-mobile">${fu}</td>
-      <td>
-        <div class="row-actions">
-          <button class="btn btn-sm btn-primary" data-action="followup">预约跟进</button>
-          <button class="btn btn-sm btn-outline" data-action="detail">详情</button>
-        </div>
-      </td>
-    </tr>`;
+  function paint(list) {
+    cache = list || cache;
+    const kw = (($('searchInput') && $('searchInput').value) || '').trim().toLowerCase();
+    const src = list || [];
+    const shown = kw ? src.filter((u) => (u.displayName || '').toLowerCase().indexOf(kw) >= 0) : src;
+    const action = `<button class="icon-round" data-action="followup" aria-label="预约跟进">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>`;
+    $('userList').innerHTML = shown.length
+      ? shown.map((u) => clientRow(u, { action })).join('')
+      : `<div class="empty">${kw ? '没有匹配的客户' : '「' + TAB_META[curTab] + '」暂无客户'}</div>`;
   }
 
   async function refresh() {
@@ -354,60 +337,118 @@ const Users = (() => {
       $('cnt-all').textContent = allRes.data.total;
 
       const { list, total, page, size } = mainRes.data;
-      $('tableBody').innerHTML = list.length
-        ? list.map(rowHTML).join('')
-        : '<tr><td colspan="8"><div class="empty-state">「' + TAB_META[curTab] + '」暂无用户</div></td></tr>';
+      cache = list || [];
+      hasMore = page * size < total;
 
-      const totalPages = Math.max(1, Math.ceil(total / size));
-      $('pageInfo').textContent = `第 ${page} / ${totalPages} 页 · 共 ${total} 位用户`;
+      paint(cache);
+      $('loadMore').style.display = hasMore ? '' : 'none';
+      $('pageInfo').textContent = `共 ${total} 位 · 已显示 ${page * size > total ? total : page * size} 位`;
     } catch (err) {
       console.error(err);
-      $('tableBody').innerHTML = '<tr><td colspan="9"><div class="empty-state">加载失败：' + esc(err.message) + '</div></td></tr>';
+      $('userList').innerHTML = '<div class="empty">加载失败：' + esc(err.message) + '</div>';
     }
   }
 
   function activate(tab) {
     if (tab && TAB_META[tab]) curTab = tab;
     curPage = 1;
-    renderTabs();
+    cache = [];
+    renderSeg();
     refresh();
   }
 
-  function setPage(delta) {
-    curPage = Math.max(1, curPage + delta);
-    refresh();
-  }
+  function nextPage() { curPage += 1; refresh(); }
 
-  return { activate, refresh, setPage };
+  function filter() { paint(cache); }
+
+  return { activate, refresh, nextPage, filter };
 })();
 
-// Tab 切换 → 同步到 hash，由路由统一驱动
 $('userTabs').addEventListener('click', (e) => {
-  const btn = e.target.closest('.tab');
+  const btn = e.target.closest('.seg');
   if (!btn) return;
   go('#/users?tab=' + btn.dataset.tab);
 });
 
-// 表格行 / 行内按钮
-$('tableBody').addEventListener('click', (e) => {
-  const tr = e.target.closest('tr[data-key]');
-  if (!tr) return;
-  const key = tr.dataset.key;
-  const name = tr.dataset.name;
-  const act = e.target.closest('[data-action]');
-  if (act && act.dataset.action === 'followup') { openFollowUp(key, name); return; }
-  go('#/user?key=' + encodeURIComponent(key));
+$('searchInput').addEventListener('input', () => Users.filter());
+
+$('userList').addEventListener('click', (e) => {
+  const row = e.target.closest('.client-row');
+  if (!row) return;
+  if (e.target.closest('[data-action="followup"]')) {
+    e.preventDefault();
+    e.stopPropagation();
+    openFollowUp(row.dataset.key, row.dataset.name);
+  }
 });
 
-// 分页
-document.querySelectorAll('[data-page]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    Users.setPage(Number(btn.dataset.page));
-  });
+$('loadMore').addEventListener('click', () => Users.nextPage());
+
+/* ============================================================
+   视图三：跟进任务
+   ============================================================ */
+const FollowUps = (() => {
+  let loaded = false;
+
+  async function refresh() {
+    try {
+      const json = await apiFetch('/api/follow-ups?status=all');
+      const list = json.data || [];
+      const pending = list.filter((f) => f.status === 'pending');
+      const rest = list.filter((f) => f.status !== 'pending');
+
+      $('fuSummary').textContent = `待处理 ${pending.length} · 已结束 ${rest.length}`;
+
+      const card = (f) => {
+        const statusTag = f.status === 'pending'
+          ? '<span class="delta-pill warn">待跟进</span>'
+          : (f.status === 'done' ? '<span class="delta-pill up">已完成</span>' : '<span class="delta-pill muted">已取消</span>');
+        const actions = f.status === 'pending'
+          ? `<div class="tc-actions">
+              <button class="btn-ghost btn-sm" data-fu-done="${f.id}">完成</button>
+              <button class="btn-ghost btn-sm" data-fu-cancel="${f.id}">取消</button>
+             </div>`
+          : '';
+        return `<div class="task-card" data-route="#/user?key=${encodeURIComponent(f.user_key)}">
+          <div class="tc-time">${esc(f.plan_time || '未设时间')}</div>
+          <div class="tc-desc">${esc(f.display_name || '未命名客户')}${f.note ? ' · ' + esc(f.note) : ''}</div>
+          <div class="tc-src"><span>负责人 ${esc(f.owner || '未指派')} · ${fmtFullTime(f.created_at)}</span>${statusTag}</div>
+          ${actions}
+        </div>`;
+      };
+
+      $('fuList').innerHTML = list.length
+        ? (pending.length ? pending.map(card).join('') : '') + (rest.length ? rest.map(card).join('') : '')
+        : '<div class="empty">还没有跟进任务<br>去客户列表里点「＋」预约一个</div>';
+    } catch (err) {
+      $('fuList').innerHTML = '<div class="empty">加载失败：' + esc(err.message) + '</div>';
+    }
+  }
+
+  function activate() { refresh(); loaded = true; }
+  return { activate, refresh };
+})();
+
+$('fuList').addEventListener('click', async (e) => {
+  const done = e.target.closest('[data-fu-done]');
+  const cancel = e.target.closest('[data-fu-cancel]');
+  if (!done && !cancel) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const id = (done || cancel).dataset.fuDone || (done || cancel).dataset.fuCancel;
+  const status = done ? 'done' : 'canceled';
+  try {
+    const json = await apiFetch(`/api/follow-ups/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (json.code === 0) FollowUps.refresh(); else alert(json.msg || '操作失败');
+  } catch (err) { alert('操作失败：' + err.message); }
 });
 
 /* ============================================================
-   视图三：用户详情
+   视图四：客户详情
    ============================================================ */
 const UserDetail = (() => {
   let curKey = '';
@@ -415,20 +456,14 @@ const UserDetail = (() => {
 
   function openGate() {
     $('userRoot').innerHTML = `
-      <div class="key-gate-wrap">
-        <div class="key-gate">
-          <div class="kg-icon">🔎</div>
-          <div class="kg-title">查询用户详情</div>
-          <div class="kg-sub">
-            请输入要查看的用户 <b>key</b>，或直接在地址栏带上参数访问<br>
-            <span class="mono">/sales#/user?key=xxxx</span>
-          </div>
-          <div class="kg-form">
-            <input class="kg-input" id="keyInput" type="text" autocomplete="off" spellcheck="false" placeholder="请输入用户 key，例如 e46092e8-8c66-4208-add3-80e062b6a774">
-            <button class="btn btn-primary" data-action="gate-go">查询</button>
-          </div>
-          <div class="kg-hint">提示：也可以从「用户列表」点击任一用户直接进入</div>
+      <div class="card">
+        <div class="card-title">查询客户详情</div>
+        <div class="field">
+          <label>客户 key</label>
+          <textarea id="keyInput" rows="2" placeholder="例如 e46092e8-8c66-4208-add3-80e062b6a774"></textarea>
         </div>
+        <button class="btn-primary block" data-action="gate-go">查询</button>
+        <div class="kv muted" style="margin-top:12px;">也可以从「客户」列表点任意一位直接进入</div>
       </div>`;
     const input = $('keyInput');
     if (input) {
@@ -438,10 +473,8 @@ const UserDetail = (() => {
   }
 
   function submitGate() {
-    const input = $('keyInput');
-    if (!input) return;
-    const v = input.value.trim();
-    if (!v) { input.focus(); return; }
+    const v = ($('keyInput').value || '').trim();
+    if (!v) return;
     go('#/user?key=' + encodeURIComponent(v));
   }
 
@@ -456,107 +489,101 @@ const UserDetail = (() => {
   }
 
   function render(u) {
-    const signals = [];
-    if (u.isHeatingUp) signals.push('<span class="pill pill-red">⚡ 正在升温</span>');
-
     const suggestions = buildSuggestions(u).map((s, i) =>
-      `<div class="suggest-item"><div class="s-label">建议 ${i + 1}</div><div class="s-text">${esc(s)}</div></div>`
+      `<div class="ai-item"><div class="ai-num">${i + 1}</div><div class="ai-text">${esc(s)}</div></div>`
     ).join('');
 
     const details = (u.scoreDetails || []).map((d) =>
-      `<div class="detail-row"><span class="d-label">${esc(d.label)}</span><span class="d-event">${esc(d.event)}</span><span class="d-point">+${d.point}</span></div>`
-    ).join('') || '<div class="empty-state">暂无评分明细</div>';
+      `<div class="bd-row"><span class="bd-label">${esc(d.label)}</span><span class="bd-event">${esc(d.event)}</span><span class="bd-point">+${d.point}</span></div>`
+    ).join('') || '<div class="empty">暂无评分明细</div>';
 
-    // 行为时间线：仅「开发者」视角渲染该模块，老板娘 / 穿搭师视角整块隐藏
     const canViewTimeline = currentRole === 'developer';
     const timeline = canViewTimeline ? (u.timeline || []).map((t) => {
       const extraStr = Object.keys(t.extra || {}).length
         ? `<div class="tl-extra">${Object.entries(t.extra).map(([k, v]) => `${esc(k)}: ${esc(typeof v === 'object' ? JSON.stringify(v) : v)}`).join(' · ')}</div>`
         : '';
-      return `<div class="tl-item"><div class="tl-time">${esc(t.formattedTime)}</div><div class="tl-event">${esc(t.event)}${t.eventMsg ? `<span class="tag">${esc(t.eventMsg)}</span>` : ''}</div>${extraStr}</div>`;
+      return `<div class="tl-item"><div class="tl-time">${esc(t.formattedTime)}</div><div class="tl-event">${esc(t.event)}${t.eventMsg ? ` · ${esc(t.eventMsg)}` : ''}</div>${extraStr}</div>`;
     }).join('') : '';
 
     const fus = u.followUps || [];
     const fuHTML = fus.length ? fus.map((f) => {
-      const st = f.status === 'pending' ? '<span class="fu-status fu-pending">待跟进</span>'
-        : f.status === 'done' ? '<span class="fu-status fu-done">已完成</span>'
-        : '<span class="fu-status fu-canceled">已取消</span>';
+      const tag = f.status === 'pending' ? '<span class="delta-pill warn">待跟进</span>'
+        : f.status === 'done' ? '<span class="delta-pill up">已完成</span>'
+        : '<span class="delta-pill muted">已取消</span>';
       const act = f.status === 'pending'
-        ? `<div style="display:flex;gap:6px;">${st}<button class="btn btn-sm btn-outline" data-action="fu-status" data-id="${f.id}" data-status="done">完成</button><button class="btn btn-sm btn-outline" data-action="fu-status" data-id="${f.id}" data-status="canceled">取消</button></div>`
-        : st;
-      return `<div class="fu-item"><div><div class="fu-info">📌 ${esc(f.plan_time || '未设时间')}${f.note ? ` · ${esc(f.note)}` : ''}</div><div class="fu-plan">${fmtFullTime(f.created_at)} 创建</div></div>${act}</div>`;
-    }).join('') : '<div class="empty-state">暂无跟进记录，点击右上角「预约跟进」</div>';
+        ? `<div class="tc-actions">${tag}<button class="btn-ghost btn-sm" data-action="fu-status" data-id="${f.id}" data-status="done">完成</button><button class="btn-ghost btn-sm" data-action="fu-status" data-id="${f.id}" data-status="canceled">取消</button></div>`
+        : tag;
+      return `<div class="task-card" style="margin-bottom:8px;">
+        <div class="tc-time">${esc(f.plan_time || '未设时间')}</div>
+        <div class="tc-desc">${esc(f.note || '跟进任务')}</div>
+        <div class="tc-src"><span>${fmtFullTime(f.created_at)} 创建${f.owner ? ' · ' + esc(f.owner) : ''}</span>${act}</div>
+      </div>`;
+    }).join('') : '<div class="empty">暂无跟进记录</div>';
 
     $('userRoot').innerHTML = `
-      <a class="back-link" href="#/users">← 返回用户列表</a>
+      <a class="back-link" href="#/users">‹ 返回客户列表</a>
 
-      <!-- 用户头部 -->
-      <div class="user-hero">
-        <div class="u-info">
-          <div class="avatar-lg">${esc(u.displayName[0])}</div>
-          <div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <span class="u-name-lg">${esc(u.displayName)}</span>
-              ${signals.join('')}
-            </div>
-            <div class="u-id-lg">${esc(u.uid || '')} · ${esc(u.aid || '')}</div>
-            <div class="u-tags">
-              <span class="pill pill-red">意向分 ${u.score}</span>
-              <span class="pill pill-red">优先级 ${u.priority}</span>
-              <span class="pill pill-green">加速 ×${u.momentum}</span>
-              <span class="pill pill-green">${u.behaviorCount} 次行为</span>
-              <span class="pill pill-green">${u.openDays} 天活跃</span>
-            </div>
+      <div class="detail-hero">
+        <div class="avatar avatar-lg">${esc((u.displayName || '?')[0])}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="dh-name">${esc(u.displayName)}${u.isHeatingUp ? '<span class="dh-tag hot">升温中</span>' : ''}</div>
+          <div class="dh-id">${esc(u.uid || u.key || '')}${u.aid ? ' · ' + esc(u.aid) : ''}</div>
+          <div class="dh-tags">
+            <span class="dh-tag">活跃 ${u.openDays} 天</span>
+            <span class="dh-tag">${u.behaviorCount} 次行为</span>
+            ${u.collectedLooks ? `<span class="dh-tag good">收藏 ${u.collectedLooks}</span>` : ''}
+            ${u.viewedSkus ? `<span class="dh-tag">浏览 ${u.viewedSkus} 件</span>` : ''}
           </div>
-        </div>
-        <div class="u-actions">
-          <button class="btn btn-green" data-action="gen">🎨 制作下一套穿搭</button>
-          <button class="btn btn-primary" data-action="followup">📌 预约跟进</button>
         </div>
       </div>
 
-      <!-- 指标 -->
-      <div class="metrics-row">
-        <div class="metric-card"><div class="mk">意向分 IntentScore</div><div class="mv hot">${u.score}</div><div class="md">Σ W×F×R</div></div>
-        <div class="metric-card"><div class="mk">意向加速 Momentum</div><div class="mv">×${u.momentum}</div><div class="md">近 48h 活跃窗口</div></div>
-        <div class="metric-card"><div class="mk">综合优先级</div><div class="mv">${u.priority}</div><div class="md">IntentScore × Momentum</div></div>
+      <div class="score-row">
+        <div class="sr-main">
+          <div class="sr-label">AI 意向分</div>
+          <div class="sr-value">${u.score}</div>
+          ${deltaPill(u.todayScore, ' 近48h')}
+        </div>
+        <div class="sr-cell"><div class="k">加速</div><div class="v">×${u.momentum}</div></div>
+        <div class="sr-cell"><div class="k">优先级</div><div class="v">${u.priority}</div></div>
+        <div class="sr-cell"><div class="k">最近活跃</div><div class="v">${relTime(u.lastActive)}</div></div>
       </div>
 
-      <!-- 双栏 -->
-      <div class="grid-2">
-        <div>
-          ${canViewTimeline ? `<div class="card" style="margin-bottom:20px;">
-            <div class="card-title">📜 行为时间线 <span class="sub">最近 50 条</span></div>
-            <div class="timeline" style="max-height:420px;overflow-y:auto;">${timeline || '<div class="empty-state">暂无行为记录</div>'}</div>
-          </div>` : ''}
-          <div class="card">
-            <div class="card-title">🧮 评分明细 <span class="sub">IntentScore = Σ(W×F×R)</span></div>
-            <div style="max-height:300px;overflow-y:auto;">${details}</div>
-          </div>
-        </div>
-        <div>
-          <div class="card" style="margin-bottom:20px;">
-            <div class="card-title">💬 建议话术</div>
-            ${suggestions}
-          </div>
-          <div class="card">
-            <div class="card-title">📌 跟进记录</div>
-            ${fuHTML}
-          </div>
-        </div>
+      <div class="detail-block card">
+        <div class="card-title">AI 建议话术</div>
+        ${suggestions}
+      </div>
+
+      <div class="detail-block card">
+        <div class="card-title">跟进记录</div>
+        ${fuHTML}
+      </div>
+
+      <div class="detail-block card">
+        <div class="card-title">评分明细</div>
+        <div class="breakdown">${details}</div>
+      </div>
+
+      ${canViewTimeline ? `<div class="detail-block card">
+        <div class="card-title">行为时间线 <span class="link muted">最近 50 条</span></div>
+        <div class="timeline">${timeline || '<div class="empty">暂无行为记录</div>'}</div>
+      </div>` : ''}
+
+      <div class="detail-actions">
+        <button class="btn-primary" data-action="followup">预约跟进</button>
+        <button class="btn-ghost" data-action="gen">生成穿搭</button>
       </div>`;
   }
 
   async function load() {
     if (!curKey) { openGate(); return; }
-    $('userRoot').innerHTML = '<div class="loading"><div class="spinner"></div>加载用户数据…</div>';
+    $('userRoot').innerHTML = '<div class="skeleton-line"></div><div class="skeleton-line short"></div>';
     try {
       const json = await apiFetch(`/api/intent/user?key=${encodeURIComponent(curKey)}`);
-      if (json.code !== 0 || !json.data) throw new Error(json.msg || '未找到用户');
+      if (json.code !== 0 || !json.data) throw new Error(json.msg || '未找到客户');
       userData = json.data;
       render(json.data);
     } catch (err) {
-      $('userRoot').innerHTML = `<div class="empty-state">加载失败：${esc(err.message)}<div style="margin-top:16px;"><button class="btn btn-outline" data-action="gate">重新输入 key</button></div></div>`;
+      $('userRoot').innerHTML = `<div class="empty">加载失败：${esc(err.message)}<div style="margin-top:16px;"><button class="btn-ghost" data-action="gate">重新输入 key</button></div></div>`;
     }
   }
 
@@ -571,14 +598,10 @@ const UserDetail = (() => {
     } catch (err) { alert('操作失败：' + err.message); }
   }
 
-  function activate(key) {
-    if (key) curKey = key;
-    load();
-  }
-
+  function activate(key) { if (key) curKey = key; load(); }
   function refresh() { if (curKey) load(); }
+  function getData() { return userData; }
 
-  // 详情视图内的动作委托
   $('userRoot').addEventListener('click', (e) => {
     const act = e.target.closest('[data-action]');
     if (!act) return;
@@ -589,8 +612,6 @@ const UserDetail = (() => {
     else if (a === 'followup' && userData) openFollowUp(userData.key, userData.displayName);
     else if (a === 'fu-status') setFuStatus(Number(act.dataset.id), act.dataset.status);
   });
-
-  function getData() { return userData; }
 
   return { activate, refresh, getData };
 })();
@@ -615,13 +636,12 @@ $('genSubmit').addEventListener('click', () => {
   for (let i = 0; i < count; i++) {
     const itemsArr = chosen[1].map((it, j) => `${it} ${chosen[2][j % chosen[2].length]}`);
     const total = 1280 + 980 + 560 + i * 160;
-    looks.push(`<div class="item">🎨 方案 ${i + 1}：${itemsArr.join(' + ')}<br><span style="color:var(--green);font-weight:600;">参考价 ¥${total.toLocaleString()}</span></div>`);
+    looks.push(`<div class="task-card" style="margin-bottom:8px;"><div class="tc-time">方案 ${i + 1}</div><div class="tc-desc">${itemsArr.join(' + ')}</div><div class="tc-src"><span>参考价</span><span class="delta-pill up">¥${total.toLocaleString()}</span></div></div>`);
   }
-  $('genResult').innerHTML = `<div class="gen-result"><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">基于【${esc(u.displayName)}】的收藏/浏览偏好生成：</div>${looks.join('')}<div style="padding-top:8px;color:var(--text-muted);font-size:12px;">💡 可微调后通过企业微信发送给用户</div></div>`;
+  $('genResult').innerHTML = `<div style="margin-top:8px;"><div class="kv muted" style="margin-bottom:8px;">基于【${esc(u.displayName)}】的收藏 / 浏览偏好生成</div>${looks.join('')}</div>`;
 });
 
-/* ================= 启动 =================
-   先确认登录会话，再按会话角色渲染；未登录直接进入登录页，不加载任何用户数据 */
+/* ================= 启动 ================= */
 async function bootstrap() {
   try {
     const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -637,12 +657,9 @@ async function bootstrap() {
   applyRole();
   route();
 
-  // 定时刷新（仅刷新当前视图）
-  let tickCount = 0;
   setInterval(() => {
-    tickCount++;
     if (currentView === 'overview') Overview.refresh();
-    else if (currentView === 'users' && tickCount % 2 === 0) Users.refresh();
+    else if (currentView === 'followups') FollowUps.refresh();
   }, 30000);
 }
 
