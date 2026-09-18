@@ -712,10 +712,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== 初始化 =====
-(function init() {
-  // 视角守卫：「行为日志」仅开发者视角可见，非开发者直接拦截（防止手输 URL 绕过）
-  let role = localStorage.getItem('salesRole');
-  if (role !== 'developer' && role !== 'boss' && role !== 'ca') role = 'ca';
+(async function init() {
+  // 视角守卫：「行为日志」仅开发者视角可见
+  // 角色一律来自服务端会话 /api/auth/me，不再读本地 localStorage（登录后可切换的机制已废弃）
+  let role = 'ca';
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.code !== 0) { location.replace('/login'); return; }
+    role = json.data.role;
+  } catch (e) {
+    location.replace('/login');
+    return;
+  }
   document.body.setAttribute('data-role', role);
   if (role !== 'developer') {
     const nav = document.querySelector('.top-nav');
@@ -730,7 +739,7 @@ document.addEventListener('keydown', (e) => {
             (role === 'boss' ? '老板娘' : '穿搭师 / CA') +
           '</div>' +
           '<a href="/sales" style="display:inline-block;margin-top:22px;padding:10px 22px;border-radius:9px;background:var(--primary);color:#fff;text-decoration:none;font-size:13px;font-weight:600;">返回销售工作台</a>' +
-          '<div style="font-size:12px;color:#9CA3AF;margin-top:14px;">如需查看，请在销售工作台右上角切换到「开发者」视角</div>' +
+          '<div style="font-size:12px;color:#9CA3AF;margin-top:14px;">视角由 airU 合作方授权决定，登录后固定，页面内不可切换</div>' +
         '</div>';
     }
     return;

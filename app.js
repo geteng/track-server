@@ -27,7 +27,9 @@ app.use(partnerAuth.attachSession);
 
 /* ---- 业务数据接口一律要求登录会话（埋点上报 /api/track 保持公开） ----
    角色只来自登录态，不再读取 URL 上的 role 参数，避免越权 */
-app.use(['/api/intent', '/api/follow-ups', '/api/consent', '/api/behavior-log'], partnerAuth.requireAuth);
+app.use(['/api/intent', '/api/follow-ups', '/api/consent'], partnerAuth.requireAuth);
+/* 行为日志为 L0 / L1 原始明细，仅开发者视角可读取 */
+app.use('/api/behavior-log', partnerAuth.requireAuth, partnerAuth.requireRole('developer'));
 
 /* ============ 初始化 SQLite ============ */
 const db = new sqlite3.Database('./track.db', (err) => {
@@ -632,7 +634,10 @@ app.get('/login', (req, res) => {
   sendHtml(res, 'login.html', '登录');
 });
 
-app.get('/userBehavior', partnerAuth.requireLoginPage, (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
+app.get('/userBehavior',
+  partnerAuth.requireLoginPage,
+  partnerAuth.requireRolePage('developer', { title: '「行为日志」包含 L0 / L1 原始被动行为明细，', allowText: '开发者' }),
+  (req, res) => sendHtml(res, 'dashboard.html', 'Dashboard'));
 
 /* ---- 销售工作台：单页应用 ----
    今日概览 / 用户列表 / 用户详情合并为一个页面，对外只暴露 /sales，

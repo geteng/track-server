@@ -289,11 +289,60 @@ function requirePermission(permission) {
   };
 }
 
+/* 角色守卫：接口用（越权返回 403 JSON）
+   角色只来自登录会话，URL / 请求体上的 role 一律不生效 */
+function requireRole(roles) {
+  const list = (Array.isArray(roles) ? roles : [roles]).filter(Boolean);
+  return (req, res, next) => {
+    if (!CONFIG.enabled) return next();
+    if (!req.session) {
+      return res.status(401).json({ code: 401, msg: ERROR_TEXT.UNAUTHORIZED, errorCode: 'UNAUTHORIZED' });
+    }
+    if (list.length && !list.includes(req.session.role)) {
+      return res.status(403).json({ code: 403, msg: '当前角色无此操作权限', errorCode: 'FORBIDDEN' });
+    }
+    next();
+  };
+}
+
 /* 页面访问拦截：未登录跳转登录页 */
 function requireLoginPage(req, res, next) {
   if (!CONFIG.enabled || req.session) return next();
   const from = encodeURIComponent(req.originalUrl || '/sales');
   res.redirect(`/login?from=${from}`);
+}
+
+/* 角色守卫：页面用（未登录跳登录页，越权返回提示页，不给数据） */
+function requireRolePage(roles, opts = {}) {
+  const list = (Array.isArray(roles) ? roles : [roles]).filter(Boolean);
+  return (req, res, next) => {
+    if (!CONFIG.enabled) return next();
+    if (!req.session) {
+      const from = encodeURIComponent(req.originalUrl || '/sales');
+      return res.redirect(`/login?from=${from}`);
+    }
+    if (list.length && !list.includes(req.session.role)) {
+      const mapped = PARTNER_ROLE_MAP[req.session.role] || {};
+      const label = req.session.label || mapped.label || req.session.role;
+      const need = (opts.title || '该页面');
+      const allow = (opts.allowText || '开发者');
+      res.status(403);
+      return res.send(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>无权限访问</title>
+<style>body{margin:0;background:#F5F6F8;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#111827}
+.box{max-width:520px;margin:80px auto;text-align:center;background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:40px 28px}
+.icon{font-size:44px;line-height:1}h1{font-size:19px;font-weight:700;margin:16px 0 8px}
+p{font-size:13px;color:#6B7280;line-height:1.8;margin:0}b{color:#E1306C}
+a{display:inline-block;margin-top:22px;padding:10px 22px;border-radius:9px;background:#E1306C;color:#fff;text-decoration:none;font-size:13px;font-weight:600}
+.tip{font-size:12px;color:#9CA3AF;margin-top:14px}</style></head><body>
+<div class="box"><div class="icon">🔒</div><h1>当前视角无权限访问</h1>
+<p>${need}仅<b>${allow}</b>视角可查看。<br>当前视角：${label}</p>
+<a href="/sales">返回销售工作台</a>
+<div class="tip">视角由 airU 合作方授权决定，登录后固定，页面内不可切换</div>
+</div></body></html>`);
+    }
+    next();
+  };
 }
 
 /* ---------- 路由 ---------- */
@@ -382,8 +431,10 @@ module.exports = {
   ERROR_TEXT,
   attachSession,
   requireAuth,
+  requireRole,
   requirePermission,
   requireLoginPage,
+  requireRolePage,
   registerAuthRoutes,
   verifySession,
   signSession,
