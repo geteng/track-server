@@ -43,6 +43,26 @@ const go = (hash) => { if (location.hash === hash) route(); else location.hash =
 /* ================= 路由 ================= */
 let currentView = 'overview';
 
+/* ================= 顶部 Header 文案（随视图切换） ================= */
+const HEADER_META = {
+  overview: { title: () => `早安，${(currentUser && currentUser.name) || ''}`, sub: '今日待办建议优先跟进' },
+  users: { title: () => '客户列表', sub: '算法优先级实时排序' },
+  user: { title: () => '客户详情', sub: '' },
+};
+function setHeader(view) {
+  const meta = HEADER_META[view] || HEADER_META.overview;
+  const t = $('pageTitle');
+  const s = $('pageSub');
+  const b = $('pageBadge');
+  if (t) t.textContent = meta.title();
+  if (s) s.textContent = meta.sub;
+  // 「N 位高升温客户」徽章只在概览出现，数值由 Overview.refresh 填充
+  if (b) {
+    if (view !== 'overview') b.textContent = '';
+    b.style.display = view === 'overview' ? '' : 'none';
+  }
+}
+
 function parseHash() {
   const raw = location.hash.replace(/^#/, '') || '/';
   const qi = raw.indexOf('?');
@@ -63,6 +83,7 @@ function route() {
   const navActive = view === 'user' ? 'users' : view;
   document.querySelectorAll('.nav-links a[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navActive));
 
+  setHeader(view);
   window.scrollTo(0, 0);
 
   if (view === 'overview') Overview.activate();
@@ -84,16 +105,12 @@ function applyRole() {
   }
   const nameEl = $('userName');
   if (nameEl) nameEl.textContent = currentUser ? (currentUser.name || '') : '';
+  const avatarEl = $('sfAvatar');
+  if (avatarEl) avatarEl.textContent = (currentUser && currentUser.name) ? currentUser.name.trim()[0] : '—';
 
   // 「行为日志」入口：仅开发者可见
   document.body.setAttribute('data-role', currentRole);
 
-  // 概览视图的角色文案（切换到其他视图时元素仍存在，无需判空）
-  const title = $('pageTitle');
-  if (title) {
-    title.textContent = currentRole === 'ca' ? '穿搭师工作台 · 今日概览'
-      : (currentRole === 'boss' ? '店长今日概览' : '开发者今日概览');
-  }
   const banner = $('roleBanner');
   if (banner) banner.innerHTML = `<span class="lv">当前视角：${meta.label}</span> 可见数据：<b>${meta.scope}</b> · ${meta.hint}`;
 
@@ -126,7 +143,10 @@ function refreshCurrent() {
 /* ================= 时钟 ================= */
 function tick() {
   const t = $('nowText');
-  if (t) t.textContent = fmtDateTime(Date.now());
+  if (!t) return;
+  const d = new Date();
+  const week = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+  t.textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${week}`;
 }
 setInterval(tick, 1000);
 tick();
@@ -257,6 +277,13 @@ const Overview = (() => {
 
       // 今日重点
       $('hotCount').textContent = `共 ${hotRes.data.total} 位`;
+
+      // 顶部徽章：高升温客户数（仅概览视图显示）
+      const badge = $('pageBadge');
+      if (badge && currentView === 'overview') {
+        const n = hotRes.data.total ?? hotList.length;
+        badge.textContent = n ? `${n} 位高升温客户` : '';
+      }
       $('hotGrid').innerHTML = hotList.length
         ? hotList.map(userCardHTML).join('')
         : '<div class="empty-state">当前没有正在升温的高意向用户<br>可在「全部会员」中浏览</div>';
@@ -456,6 +483,12 @@ const UserDetail = (() => {
   }
 
   function render(u) {
+    // 详情视图把顶部标题换成客户名，更贴近设计稿的详情页头部
+    const hdTitle = $('pageTitle');
+    if (hdTitle) hdTitle.textContent = u.displayName || '客户详情';
+    const hdSub = $('pageSub');
+    if (hdSub) hdSub.textContent = '客户详情 · 意向快照与跟进建议';
+
     const signals = [];
     if (u.isHeatingUp) signals.push('<span class="pill pill-red">⚡ 正在升温</span>');
 
@@ -488,7 +521,7 @@ const UserDetail = (() => {
     }).join('') : '<div class="empty-state">暂无跟进记录，点击右上角「预约跟进」</div>';
 
     $('userRoot').innerHTML = `
-      <a class="back-link" href="#/users">← 返回用户列表</a>
+      <a class="back-link" href="#/users">← 返回列表</a>
 
       <!-- 用户头部 -->
       <div class="user-hero">

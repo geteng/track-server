@@ -9,9 +9,9 @@
 <body>
   <div class="login-wrap">
     <div class="login-brand">
-      <span class="icon">👗</span>
-      <h1>airU 销售工作台</h1>
-      <p>使用 airU 老师账号登录 · 角色由合作方授权决定</p>
+      <div class="login-logo">airU</div>
+      <h1>CRM 助手</h1>
+      <p>AI 驱动销售管理 · 角色由合作方授权决定</p>
     </div>
 
     <div class="login-card">
@@ -24,7 +24,7 @@
           <label for="password">密码</label>
           <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password">
         </div>
-        <button class="login-btn" id="loginBtn" type="submit">登 录</button>
+        <button class="login-btn" id="loginBtn" type="submit">登录</button>
       </form>
       <div class="login-tip" id="loginTip"></div>
 
@@ -103,7 +103,7 @@
       if (!res.ok || json.code !== 0) {
         showTip(json.msg || '登录失败，请重试');
         btn.disabled = false;
-        btn.textContent = '登 录';
+        btn.textContent = '登录';
         return;
       }
       // 登录态由服务端 HttpOnly Cookie 维护，前端不保存 Token，也不决定角色
@@ -111,7 +111,7 @@
     } catch (err) {
       showTip('网络异常，请检查服务是否启动');
       btn.disabled = false;
-      btn.textContent = '登 录';
+      btn.textContent = '登录';
     }
   });
 </script>

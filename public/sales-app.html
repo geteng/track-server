@@ -13,31 +13,42 @@
   document.body.setAttribute('data-role', 'ca');
 </script>
 
-<!-- ==================== 统一顶部导航（三个视图共用一个地址） ==================== -->
-<nav class="top-nav">
-  <div class="top-nav-inner">
-    <a class="logo" href="#/"><span class="icon">👗</span> airU 销售工作台</a>
+<!-- ==================== 侧边栏 + 顶部 Header（三个视图共用同一个地址） ==================== -->
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="b-title">CRM 助手</div>
+      <div class="b-sub">AI 驱动销售管理</div>
+    </div>
     <div class="nav-links">
       <a href="#/" data-nav="overview">今日概览</a>
-      <a href="#/users" data-nav="users">用户列表</a>
-      <a href="/userBehavior" class="nav-mobile-hide dev-only">行为日志</a>
+      <a href="#/users" data-nav="users">客户列表</a>
+      <a href="/userBehavior" class="dev-only">行为日志</a>
     </div>
-    <div class="nav-right">
-      <div class="role-fixed" id="roleFixed" title="角色由合作方授权决定，登录后固定，不可切换">
-        <span class="role-caption">当前视角</span>
-        <span class="role-tag" id="roleTag">—</span>
-        <span class="user-name" id="userName"></span>
+    <div class="sidebar-foot" title="视角由合作方授权决定，登录后固定，不可切换">
+      <div class="sf-avatar" id="sfAvatar">—</div>
+      <div class="sf-info">
+        <div class="sf-name" id="userName">—</div>
+        <div class="sf-role" id="roleTag">—</div>
       </div>
-      <button class="logout-btn" id="logoutBtn">退出登录</button>
-      <span id="nowText"></span>
+      <button class="logout-btn" id="logoutBtn" title="退出登录">⎋</button>
     </div>
-  </div>
-</nav>
+  </aside>
+
+  <div class="main">
+    <header class="app-header">
+      <div class="hd-left">
+        <div class="hd-title" id="pageTitle">今日概览</div>
+        <div class="hd-sub" id="pageSub"></div>
+        <div class="hd-badge" id="pageBadge"></div>
+      </div>
+      <div class="hd-date" id="nowText"></div>
+    </header>
+
+    <main class="content">
 
 <!-- ==================== 视图一：今日概览 ==================== -->
 <section class="view" id="view-overview">
-  <div class="page-title" id="pageTitle">今日概览</div>
-  <div class="page-sub">把海量用户行为压缩成三件事：谁最值得今天跟进、为什么值得、下一步该做什么。</div>
   <div class="role-banner" id="roleBanner"></div>
 
   <!-- 4 个数字 -->
@@ -79,14 +90,12 @@
 
 <!-- ==================== 视图二：用户列表 ==================== -->
 <section class="view" id="view-users">
-  <div class="page-title">高意向用户列表</div>
-  <div class="page-sub">按 Priority = IntentScore × Momentum 排序，优先跟进正在升温的用户。</div>
-
   <div class="tabs" id="userTabs">
-    <button class="tab" data-tab="hot">🔥 今日重点<span class="count" id="cnt-hot">-</span></button>
-    <button class="tab" data-tab="followup">📌 待跟进<span class="count" id="cnt-followup">-</span></button>
-    <button class="tab" data-tab="all">👥 全部会员<span class="count" id="cnt-all">-</span></button>
+    <button class="tab" data-tab="hot">高意向<span class="count" id="cnt-hot">-</span></button>
+    <button class="tab" data-tab="followup">待跟进<span class="count" id="cnt-followup">-</span></button>
+    <button class="tab" data-tab="all">全部会员<span class="count" id="cnt-all">-</span></button>
   </div>
+  <div class="tab-note">按综合优先级 Priority = IntentScore × Momentum 实时排序</div>
 
   <div class="table-section">
     <div class="table-scroll">
@@ -124,6 +133,9 @@
     <div class="loading"><div class="spinner"></div>加载用户数据…</div>
   </div>
 </section>
+    </main>
+  </div>
+</div>
 
 <!-- ==================== 弹窗：预约跟进（列表 / 详情共用） ==================== -->
 <div class="modal-mask" id="fuMask">
