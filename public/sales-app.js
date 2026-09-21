@@ -543,7 +543,9 @@ const UserDetail = (() => {
           </div>
         </div>
         <div class="u-actions">
+          <!-- 「制作下一套穿搭」已隐藏：入口暂不开放
           <button class="btn btn-green" data-action="gen">🎨 制作下一套穿搭</button>
+          -->
           <button class="btn btn-primary" data-action="followup">📌 预约跟进</button>
         </div>
       </div>
