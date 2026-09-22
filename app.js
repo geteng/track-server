@@ -7,6 +7,7 @@ const intentEngine = require('./intent-engine');
 const dataLevels = require('./data-levels');
 const createMpApi = require('./mp-api');
 const partnerAuth = require('./partner-auth');
+const createAiApi = require('./ai-api');
 
 const app = express();
 const PORT = 3000;
@@ -600,6 +601,11 @@ app.post('/api/consent', (req, res) => {
 // 与 H5 接口并存，互不干扰；详见 doc/小程序接口文档.md
 app.use('/api/mp', createMpApi(db));
 
+/* ============ AI 对话分析（DeepSeek 包装，免登录） ============ */
+// POST /api/ai/chat · GET /api/ai/config；详见 doc/AI对话分析接口文档.md
+// 注意：这里刻意不挂 requireAuth，接口对外可直接调用
+app.use('/api/ai', createAiApi());
+
 /* ============ 登录（GTT 合作方 · airU 老师账号） ============ */
 // POST /api/auth/login · GET /api/auth/me · POST /api/auth/logout · GET /api/auth/config
 partnerAuth.registerAuthRoutes(app);
@@ -655,6 +661,9 @@ app.get('/sales/user', partnerAuth.requireLoginPage, (req, res) => {
   res.redirect(`/sales#/user${key}`);
 });
 
+/* 客户对话分析（AI 提取状态）· 免登录页面 */
+app.get('/customerChat', (req, res) => sendHtml(res, 'customerChat.html', '客户对话分析'));
+
 /* ============ 启动 ============ */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ 埋点服务运行在 http://0.0.0.0:${PORT}`);
@@ -677,6 +686,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   小程序列表:   GET  /api/mp/users?tab=hot|followup|all`);
   console.log(`   小程序详情:   GET  /api/mp/user/detail?key=`);
   console.log(`   小程序跟进:   GET/POST /api/mp/follow-ups · POST /api/mp/follow-ups/:id/status · DELETE /api/mp/follow-ups/:id`);
+  console.log(`   AI 对话分析:  POST /api/ai/chat · GET /api/ai/config    （免登录）`);
   console.log(`   Dashboard:    GET  /userBehavior`);
   console.log(`   销售工作台:   GET  /sales            （单页应用 #/ 概览 · #/users 列表 · #/user?key= 详情）`);
   console.log(`   旧地址兼容:   GET  /sales/users 与 /sales/user 自动跳转 /sales`);

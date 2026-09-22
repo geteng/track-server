@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户对话分析 · AI 提取</title>
+<style>
+:root {
+  --primary: #E11D48;
+  --primary-dark: #BE123C;
+  --primary-light: #FFF1F2;
+  --bg: #F5F5F5;
+  --card-bg: #FFFFFF;
+  --text: #111111;
+  --text-2: #666666;
+  --text-muted: #999999;
+  --text-soft: #AAAAAA;
+  --border: #EBEBEB;
+  --border-dark: #D4D4D4;
+  --green: #059669;
+  --green-light: #ECFDF5;
+  --amber: #D97706;
+  --amber-light: #FEF3C7;
+  --blue: #2563EB;
+  --blue-light: #EFF6FF;
+  --purple: #7C3AED;
+  --purple-light: #F5F3FF;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.06);
+  --r-card: 10px;
+  --r-sm: 8px;
+  --font-sans: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg); color: var(--text); font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
+
+/* 顶部 */
+.cc-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:20px; }
+.cc-title { font-size:22px; font-weight:600; line-height:28px; color:#000; }
+.cc-sub { margin-top:4px; font-size:12px; font-weight:500; color:var(--text-muted); }
+.cc-meta { font-size:11px; font-weight:600; padding:4px 10px; border-radius:4px; background:var(--primary-light); color:var(--primary); white-space:nowrap; }
+
+/* 右上角模型下拉（展示用，后端固定 DeepSeek） */
+.model-wrap { position:relative; }
+.model-btn {
+  display:flex; align-items:center; gap:8px; height:32px; padding:0 12px;
+  background:#fff; border:1px solid var(--border-dark); border-radius:var(--r-sm);
+  font-family:inherit; font-size:12px; font-weight:600; color:#000; cursor:pointer;
+  transition:border-color .15s;
+}
+.model-btn:hover { border-color:#000; }
+.model-btn .caret { font-size:10px; color:var(--text-muted); }
+.model-menu {
+  display:none; position:absolute; right:0; top:calc(100% + 6px); z-index:20;
+  min-width:210px; background:#fff; border:1px solid var(--border); border-radius:var(--r-card);
+  box-shadow:0 4px 14px rgba(0,0,0,0.08); padding:6px;
+}
+.model-menu.show { display:block; }
+.model-item { padding:8px 10px; border-radius:6px; cursor:pointer; }
+.model-item:hover { background:#FAFAFA; }
+.model-item.active { background:var(--primary-light); }
+.model-item .mi-name { font-size:12px; font-weight:600; color:#000; line-height:18px; }
+.model-item.active .mi-name { color:var(--primary); }
+.model-item .mi-sub { font-size:11px; font-weight:500; color:var(--text-muted); line-height:14px; margin-top:2px; }
+
+/* 卡片 */
+.card { background:var(--card-bg); border-radius:var(--r-card); box-shadow:var(--shadow); padding:18px 20px; margin-bottom:16px; }
+.card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.card-head h2 { font-size:14px; font-weight:600; color:#000; }
+.card-hint { font-size:11px; font-weight:500; color:var(--text-muted); }
+
+/* 状态区 */
+.state-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+.state-item { background:#FAFAFA; border:1px solid var(--border); border-radius:var(--r-sm); padding:12px 14px; min-height:74px; }
+.state-item.span2 { grid-column: span 2; }
+.s-label { font-size:11px; font-weight:500; color:var(--text-muted); line-height:16px; margin-bottom:8px; }
+.s-label code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10px; color:var(--text-soft); background:#F2F2F2; padding:1px 5px; border-radius:3px; margin-left:4px; }
+.s-value { font-size:13px; font-weight:500; line-height:20px; color:var(--text); word-break:break-word; }
+.s-value.empty { color:var(--text-soft); font-weight:400; }
+
+.pill { display:inline-block; font-size:12px; font-weight:600; line-height:18px; padding:2px 10px; border-radius:4px; background:#F2F2F2; color:var(--text-2); margin:0 6px 6px 0; }
+.pill.p-red { background:var(--primary-light); color:var(--primary); }
+.pill.p-amber { background:var(--amber-light); color:var(--amber); }
+.pill.p-green { background:var(--green-light); color:var(--green); }
+.pill.p-blue { background:var(--blue-light); color:var(--blue); }
+.pill.p-purple { background:var(--purple-light); color:var(--purple); }
+.pill.p-gray { background:#F2F2F2; color:var(--text-2); }
+
+/* 文本框 */
+textarea {
+  width:100%; border:1px solid var(--border-dark); border-radius:var(--r-sm);
+  padding:12px; font-size:13px; line-height:1.8; color:var(--text); background:#fff;
+  font-family:var(--font-sans); resize:vertical; transition:border-color .15s, box-shadow .15s;
+}
+textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(225,29,72,0.10); }
+textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
+#promptBox { min-height:260px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+#chatBox { min-height:180px; }
+
+/* 按钮 */
+.btn { height:34px; padding:0 16px; border:none; border-radius:var(--r-sm); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s, opacity .15s, border-color .15s; }
+.btn-primary { background:#000; color:#fff; }
+.btn-primary:hover { background:#333; }
+.btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+.btn-outline { background:#fff; color:var(--text); border:1px solid var(--border-dark); }
+.btn-outline:hover { border-color:#000; }
+.btn-sm { height:28px; padding:0 12px; font-size:12px; }
+
+.cc-actions { display:flex; align-items:center; gap:10px; margin-top:4px; }
+.cc-tip { display:none; margin-top:12px; padding:10px 12px; border-radius:var(--r-sm); font-size:12px; line-height:1.6; background:var(--primary-light); color:var(--primary-dark); }
+.cc-tip.show { display:block; }
+.cc-tip.ok { background:var(--green-light); color:var(--green); }
+
+.raw-box { margin-top:12px; font-size:12px; color:var(--text-muted); }
+.raw-box summary { cursor:pointer; font-weight:500; }
+.raw-box pre { margin-top:8px; padding:12px; background:#FAFAFA; border:1px solid var(--border); border-radius:var(--r-sm); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; line-height:1.7; color:var(--text-2); white-space:pre-wrap; word-break:break-word; max-height:300px; overflow:auto; }
+
+@media (max-width: 640px) {
+  .page { padding:20px 14px 36px; }
+  .state-grid { grid-template-columns:1fr; }
+  .state-item.span2 { grid-column: span 1; }
+  .cc-title { font-size:19px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="cc-header">
+    <div>
+      <div class="cc-title">客户对话分析</div>
+      <div class="cc-sub">企业微信聊天记录 · AI 结构化提取</div>
+    </div>
+    <div class="model-wrap">
+      <button class="model-btn" id="modelBtn" type="button">
+        <span id="modelName">DeepSeek</span><span class="caret">▾</span>
+      </button>
+      <div class="model-menu" id="modelMenu">
+        <div class="model-item active" data-name="DeepSeek" data-actual="1">
+          <div class="mi-name">DeepSeek</div>
+          <div class="mi-sub" id="dsSub">deepseek-chat · 当前生效</div>
+        </div>
+        <div class="model-item" data-name="豆包">
+          <div class="mi-name">豆包</div>
+          <div class="mi-sub">doubao-pro-32k</div>
+        </div>
+        <div class="model-item" data-name="通义千问">
+          <div class="mi-name">通义千问</div>
+          <div class="mi-sub">qwen-max</div>
+        </div>
+        <div class="model-item" data-name="OpenAI">
+          <div class="mi-name">OpenAI</div>
+          <div class="mi-sub">gpt-4o</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 上：状态区 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>分析状态</h2>
+      <span class="card-hint" id="stateHint">待 AI 提取</span>
+    </div>
+    <div class="state-grid">
+      <div class="state-item span2">
+        <div class="s-label">客户核心诉求<code>customer_intention</code></div>
+        <div class="s-value empty" id="vIntention">—</div>
+      </div>
+      <div class="state-item">
+        <div class="s-label">问题分类<code>question_type</code></div>
+        <div class="s-value empty" id="vQtype">—</div>
+      </div>
+      <div class="state-item">
+        <div class="s-label">意向等级<code>intention_level</code></div>
+        <div class="s-value empty" id="vLevel">—</div>
+      </div>
+      <div class="state-item span2">
+        <div class="s-label">待跟进事项<code>pending_task</code></div>
+        <div class="s-value empty" id="vTask">—</div>
+      </div>
+      <div class="state-item">
+        <div class="s-label">客户情绪<code>emotion</code></div>
+        <div class="s-value empty" id="vEmotion">—</div>
+      </div>
+      <div class="state-item">
+        <div class="s-label">对话关键词<code>keyword</code></div>
+        <div class="s-value empty" id="vKeyword">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 中：提示词（默认只读，可编辑保存） -->
+  <section class="card">
+    <div class="card-head">
+      <h2>分析提示词</h2>
+      <button class="btn btn-outline btn-sm" id="editBtn" type="button">编辑</button>
+    </div>
+    <textarea id="promptBox" readonly spellcheck="false"></textarea>
+  </section>
+
+  <!-- 下：聊天内容 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>客户聊天内容</h2>
+      <span class="card-hint" id="charCount">0 字</span>
+    </div>
+    <textarea id="chatBox" placeholder="粘贴企业微信与客户的聊天记录，例如：&#10;客户：你们这个系统多少钱？&#10;员工：按账号数收费，50 个账号起…"></textarea>
+
+    <div class="cc-actions">
+      <button class="btn btn-primary" id="runBtn" type="button">确认 AI 提取</button>
+      <button class="btn btn-outline btn-sm" id="resetBtn" type="button">恢复默认提示词</button>
+    </div>
+    <div class="cc-tip" id="tip"></div>
+
+    <details class="raw-box">
+      <summary>查看模型原始返回</summary>
+      <pre id="rawOut">（暂无）</pre>
+    </details>
+  </section>
+</div>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var STORE_KEY = 'airU_customer_chat_prompt';
+
+  /* 默认提示词：末尾「聊天记录：」后拼接下方输入的聊天内容 */
+  var DEFAULT_PROMPT = [
+    '你是B端客户对话分析专家，下面是企业微信员工和客户的聊天记录。',
+    '请严格按照规则分析，只输出JSON，不要多余解释、markdown、注释。',
+    '',
+    '分析规则：',
+    '1. 区分角色：客户=外部联系人，员工=我方销售/客服',
+    '2. 提取信息：',
+    '- customer_intention：客户核心诉求，一句话精简描述',
+    '- question_type：问题分类，从下面固定列表选择【产品咨询、价格咨询、功能问题、故障报修、合同订单、售后退款、需求定制、投诉建议、预约拜访、其他】，只能选其中一个',
+    '- intention_level：意向等级，只能输出【高、中、低、无】',
+    '  高：明确要采购/签合同/付费；中：详细了解产品方案，有明确需求；低：简单问问，暂时无计划；无：闲聊，无业务诉求',
+    '- pending_task：待跟进事项，没有则填空字符串',
+    '- emotion：客户情绪，只能输出【正常、不满、着急、愤怒、好评】',
+    '- keyword：提取3-5个对话关键词，逗号分隔',
+    '3. 约束：',
+    '- 只基于对话原文，禁止脑补信息，原文没有就填空',
+    '- 客户一句话多次诉求，合并写到customer_intention',
+    '- 禁止编造不存在问题和意向',
+    '- 输出纯JSON，不要```代码块',
+    '',
+    '聊天记录：'
+  ].join('\n');
+
+  var QUESTION_TYPES = ['产品咨询','价格咨询','功能问题','故障报修','合同订单','售后退款','需求定制','投诉建议','预约拜访','其他'];
+  var LEVELS = ['高','中','低','无'];
+  var EMOTIONS = ['正常','不满','着急','愤怒','好评'];
+
+  var promptBox = $('promptBox');
+  var chatBox = $('chatBox');
+  var editBtn = $('editBtn');
+  var runBtn = $('runBtn');
+  var tip = $('tip');
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function setTip(msg, ok) {
+    tip.textContent = msg || '';
+    tip.className = 'cc-tip' + (msg ? ' show' : '') + (ok ? ' ok' : '');
+  }
+  function setVal(el, html, empty) {
+    el.innerHTML = html;
+    el.className = 's-value' + (empty ? ' empty' : '');
+  }
+  function pill(text, cls) {
+    return '<span class="pill ' + (cls || 'p-gray') + '">' + esc(text) + '</span>';
+  }
+  function clearState() {
+    ['vIntention','vQtype','vLevel','vTask','vEmotion','vKeyword'].forEach(function (id) {
+      var el = $(id);
+      el.textContent = '—';
+      el.className = 's-value empty';
+    });
+  }
+
+  /* ---- 提示词：默认只读，编辑 ↔ 保存 ---- */
+  var saved = localStorage.getItem(STORE_KEY);
+  promptBox.value = saved || DEFAULT_PROMPT;
+
+  editBtn.addEventListener('click', function () {
+    if (promptBox.readOnly) {
+      promptBox.readOnly = false;
+      promptBox.focus();
+      editBtn.textContent = '保存';
+      editBtn.classList.add('btn-primary');
+      editBtn.classList.remove('btn-outline');
+    } else {
+      var v = promptBox.value.trim();
+      if (!v) { setTip('提示词不能为空'); return; }
+      promptBox.readOnly = true;
+      promptBox.value = v;
+      localStorage.setItem(STORE_KEY, v);
+      editBtn.textContent = '编辑';
+      editBtn.classList.remove('btn-primary');
+      editBtn.classList.add('btn-outline');
+      setTip('提示词已保存', true);
+    }
+  });
+
+  $('resetBtn').addEventListener('click', function () {
+    localStorage.removeItem(STORE_KEY);
+    promptBox.value = DEFAULT_PROMPT;
+    promptBox.readOnly = true;
+    editBtn.textContent = '编辑';
+    editBtn.classList.remove('btn-primary');
+    editBtn.classList.add('btn-outline');
+    setTip('已恢复默认提示词', true);
+  });
+
+  chatBox.addEventListener('input', function () {
+    $('charCount').textContent = chatBox.value.length + ' 字';
+  });
+
+  /* ---- 渲染结果 ---- */
+  function renderResult(data) {
+    var d = data || {};
+    var intention = (d.customer_intention || '').trim();
+    setVal($('vIntention'), intention ? esc(intention) : '—', !intention);
+
+    var qtype = (d.question_type || '').trim();
+    var qCls = QUESTION_TYPES.indexOf(qtype) >= 0 ? 'p-purple' : 'p-gray';
+    setVal($('vQtype'), qtype ? pill(qtype, qCls) : '—', !qtype);
+
+    var level = (d.intention_level || '').trim();
+    var lCls = level === '高' ? 'p-red' : level === '中' ? 'p-amber' : level === '低' ? 'p-blue' : 'p-gray';
+    setVal($('vLevel'), level ? pill(level, lCls) : '—', !level);
+
+    var task = (d.pending_task || '').trim();
+    setVal($('vTask'), task ? esc(task) : '无', !task);
+
+    var emo = (d.emotion || '').trim();
+    var eCls = (emo === '愤怒') ? 'p-red' : (emo === '不满' || emo === '着急') ? 'p-amber' : (emo === '正常' || emo === '好评') ? 'p-green' : 'p-gray';
+    setVal($('vEmotion'), emo ? pill(emo, eCls) : '—', !emo);
+
+    var kw = (d.keyword || '').trim();
+    var list = kw ? kw.split(/[,，、\s]+/).filter(function (x) { return x; }) : [];
+    setVal($('vKeyword'), list.length ? list.map(function (k) { return pill(k, 'p-blue'); }).join('') : '—', !list.length);
+  }
+
+  /* ---- 调用接口 ---- */
+  runBtn.addEventListener('click', async function () {
+    var content = chatBox.value.trim();
+    if (!content) { setTip('请先输入客户聊天内容'); chatBox.focus(); return; }
+
+    runBtn.disabled = true;
+    runBtn.textContent = 'AI 提取中…';
+    setTip('');
+    $('stateHint').textContent = 'AI 提取中…';
+
+    try {
+      var res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptBox.value,
+          content: content,
+          model: 'deepseek-chat',
+          temperature: 0
+        })
+      });
+      var json = await res.json().catch(function () { return {}; });
+      if (!res.ok || json.code !== 0) {
+        setTip((json && json.msg) || 'AI 提取失败，请重试');
+        $('stateHint').textContent = '提取失败';
+        $('rawOut').textContent = (json && json.msg) || '调用失败';
+        return;
+      }
+      var data = json.data || {};
+      $('rawOut').textContent = data.content || '（空返回）';
+      if (data.model) $('dsSub').textContent = data.model + ' · 当前生效';
+
+      if (!data.json) {
+        setTip('模型未返回合法 JSON，已展示原始返回，可微调提示词后重试');
+        $('stateHint').textContent = '解析失败';
+        clearState();
+        return;
+      }
+      renderResult(data.json);
+      $('stateHint').textContent = data.usage
+        ? '已提取 · 消耗 ' + data.usage.total_tokens + ' tokens'
+        : '已提取';
+      setTip('AI 提取完成', true);
+    } catch (err) {
+      setTip('网络异常，请检查服务是否启动');
+      $('stateHint').textContent = '提取失败';
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = '确认 AI 提取';
+    }
+  });
+
+  /* ---- 右上角模型下拉：仅展示可切换能力，后端固定走 DeepSeek ---- */
+  var modelBtn = $('modelBtn');
+  var modelMenu = $('modelMenu');
+
+  modelBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    modelMenu.classList.toggle('show');
+  });
+  modelMenu.addEventListener('click', function (e) {
+    var item = e.target.closest('.model-item');
+    if (!item) return;
+    var name = item.dataset.name;
+    Array.prototype.forEach.call(modelMenu.querySelectorAll('.model-item'), function (el) {
+      el.classList.toggle('active', el === item);
+    });
+    $('modelName').textContent = name;
+    modelMenu.classList.remove('show');
+    setTip(item.dataset.actual
+      ? '当前模型：DeepSeek（后端实际调用）'
+      : '已选择「' + name + '」（演示）：当前版本后端仍固定调用 DeepSeek', !!item.dataset.actual);
+  });
+  document.addEventListener('click', function () { modelMenu.classList.remove('show'); });
+
+  /* 拉取一次接口配置，展示当前模型 */
+  fetch('/api/ai/config').then(function (r) { return r.json(); }).then(function (j) {
+    var d = (j && j.data) || {};
+    if (d.model) $('dsSub').textContent = d.model + ' · 当前生效';
+    if (d.hasKey === false) setTip('服务端未配置 DEEPSEEK_API_KEY，调用将失败');
+  }).catch(function () {});
+</script>
+</body>
+</html>
