@@ -360,7 +360,7 @@ const Users = (() => {
       <td class="col-hide-mobile" data-label="跟进状态">${fu}</td>
       <td data-label="操作">
         <div class="row-actions">
-          <button class="btn btn-sm btn-primary" data-action="followup">预约跟进</button>
+          ${curTab === 'followup' ? '' : '<button class="btn btn-sm btn-primary" data-action="followup">预约跟进</button>'}
           <button class="btn btn-sm btn-outline" data-action="detail">详情</button>
         </div>
       </td>
