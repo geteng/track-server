@@ -152,11 +152,11 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display: block; }
   background: var(--card-bg); border-radius: var(--r-card); box-shadow: var(--shadow);
   padding: 16px 20px 18px; position: relative; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s;
 }
-.stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); z-index: 3; }
 /* 右上角状态点（贴卡片边框，圆点 + 光晕） */
 .stat-card .icon-badge {
-  position: absolute; right: 10px; top: 10px; width: 14px; height: 14px; border-radius: 50%;
-  font-size: 0; margin: 0; transition: transform 0.2s;
+  position: absolute; right: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%;
+  font-size: 0; margin: 0; z-index: 2; transition: transform 0.2s;
 }
 .stat-card:hover .icon-badge { transform: scale(1.1); }
 .stat-card .label { font-size: 12px; font-weight: 500; line-height: 18px; color: var(--text-muted); }
@@ -387,7 +387,7 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display: block; }
   #view-overview .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   #view-overview .stats-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
   #view-overview .stat-card { padding: 14px 14px 16px; }
-  #view-overview .stat-card .icon-badge { right: 8px; top: 8px; width: 12px; height: 12px; }
+  #view-overview .stat-card .icon-badge { right: -6px; top: -6px; width: 12px; height: 12px; }
   #view-overview .stat-card .value { font-size: 30px; line-height: 34px; }
   #view-overview .user-grid { grid-template-columns: 1fr; }
   #view-overview .level-grid { grid-template-columns: 1fr; }
