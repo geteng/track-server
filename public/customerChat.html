@@ -61,7 +61,8 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display:block; }
 .hd-sub { font-size:13px; font-weight:500; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hd-right { display:flex; align-items:center; gap:12px; }
 .content { flex:1; padding:24px 32px 40px; min-width:0; }
-.page { max-width:880px; margin:0 auto; }
+/* 与行为日志 / 工作台一致：内容左对齐，不再居中 */
+.page { max-width:1400px; }
 
 /* 右上角模型下拉（展示用，后端固定 DeepSeek） */
 .model-wrap { position:relative; }
@@ -88,7 +89,8 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display:block; }
 
 /* 卡片 */
 .card { background:var(--card-bg); border-radius:var(--r-card); box-shadow:var(--shadow); padding:18px 20px; margin-bottom:16px; }
-.card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; margin-bottom:14px; }
+.card-head .head-right { display:flex; align-items:center; gap:10px; }
 .card-head h2 { font-size:14px; font-weight:600; color:#000; }
 .card-hint { font-size:11px; font-weight:500; color:var(--text-muted); }
 
@@ -175,31 +177,6 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
         <div class="hd-title">客户对话分析</div>
         <div class="hd-sub">企业微信聊天记录 · AI 结构化提取</div>
       </div>
-      <div class="hd-right">
-        <div class="model-wrap">
-      <button class="model-btn" id="modelBtn" type="button">
-        <span id="modelName">DeepSeek</span><span class="caret">▾</span>
-      </button>
-      <div class="model-menu" id="modelMenu">
-        <div class="model-item active" data-name="DeepSeek" data-actual="1">
-          <div class="mi-name">DeepSeek</div>
-          <div class="mi-sub" id="dsSub">deepseek-chat · 当前生效</div>
-        </div>
-        <div class="model-item" data-name="豆包">
-          <div class="mi-name">豆包</div>
-          <div class="mi-sub">doubao-pro-32k</div>
-        </div>
-        <div class="model-item" data-name="通义千问">
-          <div class="mi-name">通义千问</div>
-          <div class="mi-sub">qwen-max</div>
-        </div>
-        <div class="model-item" data-name="OpenAI">
-          <div class="mi-name">OpenAI</div>
-          <div class="mi-sub">gpt-4o</div>
-        </div>
-      </div>
-      </div>
-      </div>
     </header>
 
     <main class="content">
@@ -209,7 +186,32 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
   <section class="card">
     <div class="card-head">
       <h2>分析状态</h2>
-      <span class="card-hint" id="stateHint">待 AI 提取</span>
+      <div class="head-right">
+        <span class="card-hint" id="stateHint">待 AI 提取</span>
+        <div class="model-wrap">
+          <button class="model-btn" id="modelBtn" type="button">
+            <span id="modelName">DeepSeek</span><span class="caret">▾</span>
+          </button>
+          <div class="model-menu" id="modelMenu">
+            <div class="model-item active" data-name="DeepSeek" data-actual="1">
+              <div class="mi-name">DeepSeek</div>
+              <div class="mi-sub" id="dsSub">deepseek-chat · 当前生效</div>
+            </div>
+            <div class="model-item" data-name="豆包">
+              <div class="mi-name">豆包</div>
+              <div class="mi-sub">doubao-pro-32k</div>
+            </div>
+            <div class="model-item" data-name="通义千问">
+              <div class="mi-name">通义千问</div>
+              <div class="mi-sub">qwen-max</div>
+            </div>
+            <div class="model-item" data-name="OpenAI">
+              <div class="mi-name">OpenAI</div>
+              <div class="mi-sub">gpt-4o</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="state-grid">
       <div class="state-item span2">
