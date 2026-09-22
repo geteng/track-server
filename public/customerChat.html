@@ -37,13 +37,31 @@ body {
   background: var(--bg); color: var(--text); font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
-.page { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
-
-/* 顶部 */
-.cc-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:20px; }
-.cc-title { font-size:22px; font-weight:600; line-height:28px; color:#000; }
-.cc-sub { margin-top:4px; font-size:12px; font-weight:500; color:var(--text-muted); }
-.cc-meta { font-size:11px; font-weight:600; padding:4px 10px; border-radius:4px; background:var(--primary-light); color:var(--primary); white-space:nowrap; }
+/* ===== 侧边栏 + 顶部 Header（与销售工作台 / 行为日志同一套框架） ===== */
+.app { display:flex; min-height:100vh; align-items:stretch; }
+.sidebar { width:200px; flex:0 0 200px; background:#FFFFFF; border-right:1px solid var(--border); padding:24px 0; display:flex; flex-direction:column; }
+.sidebar .brand { padding:0 20px 28px; }
+.sidebar .brand .b-title { font-size:17px; font-weight:600; line-height:22px; color:#000; }
+.sidebar .brand .b-sub { font-size:11px; font-weight:500; line-height:16px; color:#B0B0B0; margin-top:2px; }
+.sidebar .nav-links { flex:1; padding:0 10px; display:flex; flex-direction:column; gap:2px; }
+.sidebar .nav-links a { padding:8px 12px; border-radius:4px; font-size:13px; font-weight:500; line-height:20px; color:var(--text-soft); text-decoration:none; transition:background .15s,color .15s; white-space:nowrap; }
+.sidebar .nav-links a:hover { background:#F7F7F7; color:var(--text); }
+.sidebar .nav-links a.active { background:#F2F2F2; color:#000; font-weight:600; }
+.sidebar .nav-links a.dev-only { display:none; }
+body[data-role="developer"] .sidebar .nav-links a.dev-only { display:block; }
+.sidebar-foot { padding:16px 20px 0; display:flex; align-items:center; gap:10px; border-top:1px solid var(--border); margin-top:16px; }
+.sidebar-foot .sf-avatar { width:32px; height:32px; flex:0 0 32px; border-radius:50%; background:#EEEEEE; color:var(--text-2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; }
+.sidebar-foot .sf-info { min-width:0; flex:1; }
+.sidebar-foot .sf-name { font-size:12px; font-weight:600; line-height:16px; color:#000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar-foot .sf-role { font-size:11px; font-weight:500; line-height:14px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.main { flex:1; min-width:0; display:flex; flex-direction:column; }
+.app-header { height:64px; flex:0 0 64px; background:#FFFFFF; border-bottom:1px solid var(--border); padding:0 32px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.hd-left { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.hd-title { font-size:22px; font-weight:600; line-height:28px; color:#000; white-space:nowrap; }
+.hd-sub { font-size:13px; font-weight:500; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hd-right { display:flex; align-items:center; gap:12px; }
+.content { flex:1; padding:24px 32px 40px; min-width:0; }
+.page { max-width:880px; margin:0 auto; }
 
 /* 右上角模型下拉（展示用，后端固定 DeepSeek） */
 .model-wrap { position:relative; }
@@ -121,21 +139,44 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
 .raw-box pre { margin-top:8px; padding:12px; background:#FAFAFA; border:1px solid var(--border); border-radius:var(--r-sm); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; line-height:1.7; color:var(--text-2); white-space:pre-wrap; word-break:break-word; max-height:300px; overflow:auto; }
 
 @media (max-width: 640px) {
-  .page { padding:20px 14px 36px; }
+  .content { padding:16px 14px 32px; }
+  .app-header { height:auto; padding:12px 16px; flex-wrap:wrap; }
   .state-grid { grid-template-columns:1fr; }
   .state-item.span2 { grid-column: span 1; }
-  .cc-title { font-size:19px; }
+  .hd-title { font-size:19px; }
 }
 </style>
 </head>
 <body>
-<div class="page">
-  <header class="cc-header">
-    <div>
-      <div class="cc-title">客户对话分析</div>
-      <div class="cc-sub">企业微信聊天记录 · AI 结构化提取</div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="b-title">CRM 助手</div>
+      <div class="b-sub">AI 驱动销售管理</div>
     </div>
-    <div class="model-wrap">
+    <div class="nav-links">
+      <a href="/sales">今日概览</a>
+      <a href="/sales#/users">客户列表</a>
+      <a href="/userBehavior" class="dev-only">行为日志</a>
+      <a href="/customerChat">客户对话分析</a>
+    </div>
+    <div class="sidebar-foot" title="本页免登录；如已登录则展示当前登录者与视角">
+      <div class="sf-avatar" id="sfAvatar">—</div>
+      <div class="sf-info">
+        <div class="sf-name" id="sfName">免登录体验</div>
+        <div class="sf-role" id="sfRole">无需登录态</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="app-header">
+      <div class="hd-left">
+        <div class="hd-title">客户对话分析</div>
+        <div class="hd-sub">企业微信聊天记录 · AI 结构化提取</div>
+      </div>
+      <div class="hd-right">
+        <div class="model-wrap">
       <button class="model-btn" id="modelBtn" type="button">
         <span id="modelName">DeepSeek</span><span class="caret">▾</span>
       </button>
@@ -157,8 +198,12 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
           <div class="mi-sub">gpt-4o</div>
         </div>
       </div>
-    </div>
-  </header>
+      </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="page">
 
   <!-- 上：状态区 -->
   <section class="card">
@@ -222,6 +267,9 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
       <pre id="rawOut">（暂无）</pre>
     </details>
   </section>
+      </div>
+    </main>
+  </div>
 </div>
 
 <script>
@@ -430,6 +478,24 @@ textarea[readonly] { background:#FAFAFA; color:var(--text-2); }
     var d = (j && j.data) || {};
     if (d.model) $('dsSub').textContent = d.model + ' · 当前生效';
     if (d.hasKey === false) setTip('服务端未配置 DEEPSEEK_API_KEY，调用将失败');
+  }).catch(function () {});
+
+  /* ---- 侧边栏：本页免登录；已登录则展示当前登录者与固定视角 ---- */
+  Array.prototype.forEach.call(document.querySelectorAll('.sidebar .nav-links a'), function (a) {
+    a.classList.toggle('active', a.getAttribute('href') === '/customerChat');
+  });
+  fetch('/api/auth/me', { credentials: 'same-origin' }).then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (j) {
+    var d = (j && j.code === 0 && j.data) || null;
+    if (!d) return;
+    var uname = (d.user && d.user.name) || '';
+    $('sfAvatar').textContent = uname ? uname.trim()[0] : '—';
+    $('sfName').textContent = uname || '—';
+    var roleEl = $('sfRole');
+    roleEl.textContent = (d.partner_access && d.partner_access.label) || d.role || '—';
+    roleEl.setAttribute('data-role', d.role || '');
+    document.body.setAttribute('data-role', d.role || 'ca');
   }).catch(function () {});
 </script>
 </body>
