@@ -343,7 +343,7 @@ const Users = (() => {
       : '<span class="pill pill-gray">未预约</span>';
 
     return `<tr data-key="${esc(u.key)}" data-name="${esc(u.displayName)}">
-      <td>
+      <td data-label="用户">
         <div class="user-cell">
           <div class="avatar-sm">${esc(u.displayName[0])}</div>
           <div class="u">
@@ -352,13 +352,13 @@ const Users = (() => {
           </div>
         </div>
       </td>
-      <td class="col-hide-mobile">${u.score}</td>
-      <td class="col-hide-mobile">×${u.momentum}</td>
-      <td class="col-hide-mobile"><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
-      <td>${signals.join('')}</td>
-      <td class="col-hide-mobile">${u.behaviorCount}</td>
-      <td class="col-hide-mobile">${fu}</td>
-      <td>
+      <td class="col-hide-mobile" data-label="意向分">${u.score}</td>
+      <td class="col-hide-mobile" data-label="加速 ×">×${u.momentum}</td>
+      <td class="col-hide-mobile" data-label="优先级"><div class="score-cell">${pill(u.priority)}<div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(100, u.priority)}%"></div></div></div></td>
+      <td data-label="今日信号">${signals.join('')}</td>
+      <td class="col-hide-mobile" data-label="行为数">${u.behaviorCount}</td>
+      <td class="col-hide-mobile" data-label="跟进状态">${fu}</td>
+      <td data-label="操作">
         <div class="row-actions">
           <button class="btn btn-sm btn-primary" data-action="followup">预约跟进</button>
           <button class="btn btn-sm btn-outline" data-action="detail">详情</button>
