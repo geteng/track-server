@@ -74,7 +74,8 @@ function displayName(uid, aid) {
   const key = uid || aid || 'unknown';
   for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
   const surname = namePool[Math.abs(hash) % namePool.length];
-  const gender = Math.abs(hash >> 8) % 2 === 0 ? '女士' : '先生';
+  // 客户统一按女性称谓展示（原逻辑按 hash 随机取女士/先生）
+  const gender = '女士';
   return surname + gender;
 }
 
