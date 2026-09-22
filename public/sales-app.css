@@ -399,7 +399,7 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display: block; }
   .col-hide-mobile { display: none !important; }
 
   /* 表格：取消 1000px 撑宽，收紧留白，操作按钮纵向排列 */
-  .table-section table { min-width: 620px; }
+  .table-section table { min-width: 520px; }
   .table-section th { padding: 8px 10px; font-size: 11px; }
   .table-section td { padding: 10px 10px; font-size: 12px; }
   .table-section .avatar-sm { width: 24px; height: 24px; flex: 0 0 24px; font-size: 11px; margin-right: 6px; }
@@ -418,26 +418,45 @@ body[data-role="developer"] .sidebar .nav-links a.dev-only { display: block; }
   #view-user .key-gate .kg-form { flex-direction: column; }
 }
 
-/* ===== 超窄屏（≤560）：客户列表改为卡片流，彻底去掉横向滚动 ===== */
-@media (max-width: 560px) {
+/* ===== 窄屏（≤640）：客户列表改为两行式卡片流，彻底去掉横向滚动 ===== */
+@media (max-width: 640px) {
   .table-section table { min-width: 0; }
   .table-section thead { display: none; }
-  .table-section tbody tr { display: block; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-  .table-section tbody tr:last-child { border-bottom: none; }
-  .table-section tbody td {
-    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-    padding: 5px 0; border-bottom: none; text-align: right;
+
+  /* 行 = 卡片：第 1 行「用户 + 今日信号」，第 2 行「操作」 */
+  .table-section tbody tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+    gap: 8px 10px; padding: 12px 14px; border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
   }
-  /* 列名来自单元格的 data-label */
+  .table-section tbody tr:last-child { border-bottom: none; }
+  .table-section tbody tr:hover { background: #FAFAFA; }
+  .table-section tbody tr:hover td { background: transparent; }
+
+  .table-section tbody td {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0; border-bottom: none; font-size: 12px;
+  }
+  /* 列名兜底（仅在有 data-label 的非首列显示） */
   .table-section tbody td::before {
     content: attr(data-label); flex: 0 0 auto; margin-right: auto;
     color: var(--text-muted); font-size: 11px; font-weight: 500;
   }
-  /* 第一行是用户（头像+昵称），不需要列名，左对齐 */
-  .table-section tbody td:first-child { padding: 0 0 8px; justify-content: flex-start; }
-  .table-section tbody td:first-child::before { display: none; }
-  .table-section tbody td[data-label="操作"] { padding-top: 8px; }
-  .table-section tbody tr:hover td { background: transparent; }
-  .table-section .row-actions { flex-direction: row; justify-content: flex-end; }
-  .table-section .row-actions .btn { width: auto; }
+  .table-section tbody td:first-child::before,
+  .table-section tbody td[data-label="今日信号"]::before,
+  .table-section tbody td[data-label="操作"]::before { display: none; }
+
+  .table-section tbody td:first-child { grid-column: 1; min-width: 0; }
+  .table-section tbody td[data-label="今日信号"] { grid-column: 2; justify-content: flex-end; }
+  .table-section tbody td[data-label="操作"] { grid-column: 1 / -1; justify-content: flex-end; }
+  /* 空状态 / 加载失败行 */
+  .table-section tbody td[colspan] { grid-column: 1 / -1; justify-content: center; }
+  .table-section tbody td[colspan]::before { display: none; }
+
+  .table-section .user-cell .u-id { max-width: 150px; }
+  .table-section .row-actions { flex-direction: row; gap: 8px; }
+  .table-section .row-actions .btn { width: auto; padding: 0 12px; }
+
+  .pagination { padding: 12px 14px; }
+  .page-btns { flex-wrap: wrap; }
 }
