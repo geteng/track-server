@@ -1,0 +1,104 @@
+--- a/app.js
++++ b/app.js
+@@ -599,7 +599,8 @@
+ 
+ /* ============ 小程序端 API（CA 视角，v1 无鉴权，角色服务端固定 ca） ============ */
+ // 与 H5 接口并存，互不干扰；详见 doc/小程序接口文档.md
+-app.use('/api/mp', createMpApi(db));
++// 小程序 CA 接口必须登录；未登录返回 401，不再对外公开客户意向数据
++app.use('/api/mp', partnerAuth.requireAuth, createMpApi(db));
+ 
+ /* ============ AI 对话分析（DeepSeek 包装，免登录） ============ */
+ // POST /api/ai/chat · GET /api/ai/config；详见 doc/AI对话分析接口文档.md
+--- a/partner-auth.js
++++ b/partner-auth.js
+@@ -202,6 +202,45 @@
+   };
+ }
+ 
++/* ---------- 小程序免登录：一次性票据兑换 ---------- */
++// airU 小程序为已登录老师签发 60 秒一次性票据；这里在服务端向 airU 兑换令牌，
++// 再与密码登录一样用 /me 复核角色。票据与 airU 令牌都不落日志、不写入 Cookie。
++async function upstreamSsoExchange(ticket, clientId) {
++  let r;
++  try {
++    r = await fetch(`${CONFIG.upstream}/api/partner-auth/sso-exchange`, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify({ client_id: clientId, ticket }),
++    });
++  } catch (e) {
++    return err(503, 'UPSTREAM_UNREACHABLE', { detail: e.message });
++  }
++  const json = await r.json().catch(() => ({}));
++  if (!r.ok || json.success === false || !json.access_token) {
++    return err(r.status === 403 ? 403 : 401, json.errorCode || 'PARTNER_SSO_TICKET_INVALID', {
++      detail: json.error || json.message || json.msg,
++    });
++  }
++  return upstreamMe(json.access_token, clientId);
++}
++
++/* ---------- 会话：登录成功后统一生成 ---------- */
++function buildSession(ok) {
++  const now = Date.now();
++  return {
++    sub: ok.sub,
++    name: ok.name,
++    airuRole: ok.airuRole,
++    partnerRole: ok.partnerRole,
++    role: ok.role,
++    label: ok.label,
++    permissions: ok.permissions,
++    iat: now,
++    exp: now + CONFIG.ttlSeconds * 1000,
++  };
++}
++
+ /* ---------- 登录：本地演示账号 ---------- */
+ function mockLogin(identifier, password, clientId) {
+   if (clientId && clientId !== CONFIG.clientId) return err(401, 'PARTNER_CLIENT_INVALID');
+@@ -363,6 +402,23 @@
+     });
+   });
+ 
++  // 小程序“高意向”免登录入口：/sso?ticket=…  → 写入 gtt_sid 会话 → 跳转 /sales
++  app.get('/sso', async (req, res) => {
++    res.setHeader('Cache-Control', 'no-store');
++    res.setHeader('Referrer-Policy', 'no-referrer');
++    const ticket = String((req.query && req.query.ticket) || '').trim();
++    if (!CONFIG.enabled || CONFIG.mode !== 'upstream' || !ticket) {
++      return res.redirect('/login?error=sso');
++    }
++    const result = await upstreamSsoExchange(ticket, CONFIG.clientId);
++    if (!result.ok) {
++      console.warn('[sso] exchange failed:', result.error.errorCode);
++      return res.redirect('/login?error=sso');
++    }
++    setSessionCookie(res, buildSession(result.ok));
++    return res.redirect('/sales');
++  });
++
+   app.post('/api/auth/login', async (req, res) => {
+     const { identifier, password, client_id: clientId } = req.body || {};
+     const result = await login({ identifier, password, clientId }, { ip: req.ip });
+@@ -371,18 +427,7 @@
+       return res.status(status).json({ code: status, msg: message, errorCode });
+     }
+ 
+-    const now = Date.now();
+-    const session = {
+-      sub: result.ok.sub,
+-      name: result.ok.name,
+-      airuRole: result.ok.airuRole,
+-      partnerRole: result.ok.partnerRole,
+-      role: result.ok.role,
+-      label: result.ok.label,
+-      permissions: result.ok.permissions,
+-      iat: now,
+-      exp: now + CONFIG.ttlSeconds * 1000,
+-    };
++    const session = buildSession(result.ok);
+     setSessionCookie(res, session);
+     res.json({
+       code: 0,

@@ -599,7 +599,8 @@ app.post('/api/consent', (req, res) => {
 
 /* ============ 小程序端 API（CA 视角，v1 无鉴权，角色服务端固定 ca） ============ */
 // 与 H5 接口并存，互不干扰；详见 doc/小程序接口文档.md
-app.use('/api/mp', createMpApi(db));
+// 小程序 CA 接口必须登录；未登录返回 401，不再对外公开客户意向数据
+app.use('/api/mp', partnerAuth.requireAuth, createMpApi(db));
 
 /* ============ AI 对话分析（DeepSeek 包装，免登录） ============ */
 // POST /api/ai/chat · GET /api/ai/config；详见 doc/AI对话分析接口文档.md
