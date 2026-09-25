@@ -272,7 +272,8 @@ async function login({ identifier, password, clientId }, meta) {
   if (!cid) return err(400, 'PARTNER_CLIENT_ID_REQUIRED');
   if (rateLimited(meta && meta.ip)) return err(429, 'AUTH_RATE_LIMITED');
 
-  const result = CONFIG.mode === 'upstream'
+  // 演示账号走本地校验；其余账号（即使当前是 mock 模式）也转 airU 校验
+  const result = CONFIG.mode === 'upstream' || !MOCK_ACCOUNTS.some((a) => a.identifier === identifier)
     ? await upstreamLogin(identifier, password, cid)
     : mockLogin(identifier, password, cid);
 
@@ -407,7 +408,7 @@ function registerAuthRoutes(app) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Referrer-Policy', 'no-referrer');
     const ticket = String((req.query && req.query.ticket) || '').trim();
-    if (!CONFIG.enabled || CONFIG.mode !== 'upstream' || !ticket) {
+    if (!CONFIG.enabled || !ticket) {
       return res.redirect('/login?error=sso');
     }
     const result = await upstreamSsoExchange(ticket, CONFIG.clientId);
