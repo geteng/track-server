@@ -205,22 +205,31 @@ function computeIntent(logs, opts = {}) {
  * 获取全部用户意图列表（实时从行为日志计算）
  */
 function getAllUsers(cb) {
-  db.all(`SELECT aid, uid, event, timestamp, extra FROM behavior_log`, [], (err, rows) => {
+  db.all(`SELECT aid, uid, event, timestamp, extra, userName FROM behavior_log`, [], (err, rows) => {
     if (err) return cb(err);
     const byUser = {};
+    // 真实昵称：key -> { ts, name }，取该用户最近一次上报的 userName
+    const realName = new Map();
     for (const r of rows) {
       const key = normalizeKey(r.uid, r.aid);
       if (!byUser[key]) byUser[key] = { key, uid: r.uid, aid: r.aid, logs: [] };
       byUser[key].logs.push(r);
+      // 只认带 uid 的上报，避免按 aid（游客）聚合时把不同人的昵称串到一起
+      if (r.uid && r.userName) {
+        const prev = realName.get(key);
+        if (!prev || (r.timestamp || 0) >= prev.ts) realName.set(key, { ts: r.timestamp || 0, name: r.userName });
+      }
     }
     const now = Date.now();
     const users = Object.values(byUser).map(u => {
       const intent = computeIntent(u.logs, { now });
+      const rn = realName.get(u.key);
       return {
         key: u.key,
         uid: u.uid,
         aid: u.aid,
-        displayName: displayName(u.uid, u.aid),
+        // 有真实昵称用真实昵称，没有则回退到「哈希姓氏 + 女士」
+        displayName: (rn && rn.name) || displayName(u.uid, u.aid),
         ...intent,
       };
     });
@@ -240,11 +249,16 @@ function getUserDetail(key, cb) {
     if (!rows.length) return cb(null, null);
     const first = rows[0];
     const intent = computeIntent(rows, { now: Date.now() });
+    // rows 按时间升序，取最后一条非空 userName 作为真实昵称
+    let realName = '';
+    for (const r of rows) {
+      if (r.userName) realName = r.userName;
+    }
     cb(null, {
       key: normalizeKey(first.uid, first.aid),
       uid: first.uid,
       aid: first.aid,
-      displayName: displayName(first.uid, first.aid),
+      displayName: realName || displayName(first.uid, first.aid),
       ...intent,
       timeline: rows.slice(-50).reverse().map(r => ({
         id: r.id,
