@@ -272,8 +272,9 @@ async function login({ identifier, password, clientId }, meta) {
   if (!cid) return err(400, 'PARTNER_CLIENT_ID_REQUIRED');
   if (rateLimited(meta && meta.ip)) return err(429, 'AUTH_RATE_LIMITED');
 
-  // 演示账号走本地校验；其余账号（即使当前是 mock 模式）也转 airU 校验
-  const result = CONFIG.mode === 'upstream' || !MOCK_ACCOUNTS.some((a) => a.identifier === identifier)
+  // mock 模式：演示账号走本地校验，其他账号（airU 真实老师）转交 airU 校验。
+  const isDemoAccount = MOCK_ACCOUNTS.some((a) => a.identifier === identifier) || identifier === 'student';
+  const result = CONFIG.mode === 'upstream' || !isDemoAccount
     ? await upstreamLogin(identifier, password, cid)
     : mockLogin(identifier, password, cid);
 
@@ -408,6 +409,7 @@ function registerAuthRoutes(app) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Referrer-Policy', 'no-referrer');
     const ticket = String((req.query && req.query.ticket) || '').trim();
+    // 免登录始终向 airU 兑换票据；与密码登录的 mock/upstream 模式无关，演示账号不受影响。
     if (!CONFIG.enabled || !ticket) {
       return res.redirect('/login?error=sso');
     }
@@ -418,6 +420,32 @@ function registerAuthRoutes(app) {
     }
     setSessionCookie(res, buildSession(result.ok));
     return res.redirect('/sales');
+  });
+
+  // 小程序原生页面：用票据换会话并以 JSON 返回（小程序请求拿不到 302 上的 Cookie），
+  // 之后请求手动携带 Cookie: gtt_sid=<sessionToken>，其余接口与 H5 完全相同。
+  app.post('/api/auth/sso-session', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const ticket = String((req.body && req.body.ticket) || '').trim();
+    if (!CONFIG.enabled) return res.status(503).json({ code: 503, msg: ERROR_TEXT.PARTNER_AUTH_DISABLED || '登录未启用', errorCode: 'PARTNER_AUTH_DISABLED' });
+    if (!ticket) return res.status(400).json({ code: 400, msg: '缺少票据', errorCode: 'PARTNER_SSO_TICKET_REQUIRED' });
+    const result = await upstreamSsoExchange(ticket, CONFIG.clientId);
+    if (!result.ok) {
+      const { status, errorCode, message } = result.error;
+      return res.status(status).json({ code: status, msg: message, errorCode });
+    }
+    const session = buildSession(result.ok);
+    setSessionCookie(res, session);
+    res.json({
+      code: 0,
+      data: {
+        sessionToken: signSession(session),
+        cookieName: CONFIG.cookieName,
+        user: { id: session.sub, name: session.name, airu_role: session.airuRole },
+        role: session.role,
+        expires_in: CONFIG.ttlSeconds,
+      },
+    });
   });
 
   app.post('/api/auth/login', async (req, res) => {
