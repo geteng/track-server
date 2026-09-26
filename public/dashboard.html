@@ -353,6 +353,7 @@ tbody tr:hover td { background: #FAFAFA; }
           <th>时间</th>
           <th>AID</th>
           <th>UID</th>
+          <th>用户名</th>
           <th>事件</th>
           <th>事件详情</th>
           <th>页面URL</th>
@@ -363,7 +364,7 @@ tbody tr:hover td { background: #FAFAFA; }
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="11" class="loading">加载中...</td></tr>
+        <tr><td colspan="12" class="loading">加载中...</td></tr>
       </tbody>
     </table>
     </div>
@@ -496,14 +497,14 @@ async function loadData(page) {
   if (url) params.set('url', url);
 
   const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '<tr><td colspan="11" class="loading">加载中...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" class="loading">加载中...</td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/list?${params}`);
     const json = await res.json();
 
     if (json.code !== 0) {
-      tbody.innerHTML = `<tr><td colspan="11" class="no-data">查询失败: ${json.msg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" class="no-data">查询失败: ${json.msg}</td></tr>`;
       return;
     }
 
@@ -522,7 +523,7 @@ async function loadData(page) {
 
     // 渲染表格
     if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="11" class="no-data">暂无数据</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-data">暂无数据</td></tr>';
     } else {
       tbody.innerHTML = list.map(row => {
         let extraObj = {};
@@ -536,6 +537,7 @@ async function loadData(page) {
           <td style="white-space:nowrap;">${formatTime(row.timestamp)}</td>
           <td><span class="aid-link" onclick="filterByAid('${escapeHtml(row.aid)}')">${escapeHtml(row.aid)}</span></td>
           <td><span class="uid-link" onclick="filterByUid('${escapeHtml(row.uid)}')">${escapeHtml(row.uid) || '-'}</span></td>
+          <td><div class="truncate" title="${escapeHtml(row.userName || '')}">${escapeHtml(row.userName) || '-'}</div></td>
           <td><span class="event-tag ${evClass}" onclick="filterByEvent('${escapeHtml(row.event)}')">${escapeHtml(row.event)}</span>${isCrawler ? '<span class="crawler-badge">爬虫</span>' : ''}</td>
           <td><div class="truncate" title="${escapeHtml(row.eventMsg)}">${escapeHtml(row.eventMsg) || '-'}</div></td>
           <td><div class="truncate" title="${escapeHtml(row.url)}">${escapeHtml(row.url)}</div></td>
@@ -555,7 +557,7 @@ async function loadData(page) {
     document.getElementById('leaveNotice').style.display = hasLeave ? 'block' : 'none';
 
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="11" class="no-data">请求失败: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="no-data">请求失败: ${e.message}</td></tr>`;
   }
 }
 
