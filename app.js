@@ -54,7 +54,8 @@ db.serialize(() => {
     screen      TEXT,
     eventMsg    TEXT,
     level       TEXT,
-    extra       TEXT
+    extra       TEXT,
+    userName    TEXT
   )`);
   // 兼容旧表：若缺少 uid / eventMsg / level 列则自动补加；补加完成后再建索引 + 回填，避免重启报错
   db.all(`PRAGMA table_info(behavior_log)`, (err, cols) => {
@@ -64,6 +65,7 @@ db.serialize(() => {
     if (!names.includes('uid')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN uid TEXT`);
     if (!names.includes('eventMsg')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN eventMsg TEXT`);
     if (!names.includes('level')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN level TEXT`);
+    if (!names.includes('userName')) tasks.push(`ALTER TABLE behavior_log ADD COLUMN userName TEXT`);
     let i = 0;
     const step = () => {
       if (i < tasks.length) return db.run(tasks[i++], step);
@@ -211,7 +213,7 @@ app.post('/api/track', (req, res) => {
   // 层级：优先使用上报方传入的 level，非法则按事件推导，保证「每个上报都有层级」
   const level = dataLevels.isValidLevel(data.level) ? data.level : dataLevels.levelOf(data.event);
 
-  const insertSql = `INSERT INTO behavior_log (aid, uid, event, url, referrer, timestamp, userAgent, screen, eventMsg, level, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const insertSql = `INSERT INTO behavior_log (aid, uid, event, url, referrer, timestamp, userAgent, screen, eventMsg, level, extra, userName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   const params = [
     data.aid || 'unknown',
     data.uid || '',
@@ -223,7 +225,8 @@ app.post('/api/track', (req, res) => {
     data.screen || '',
     data.eventMsg || '',
     level,
-    JSON.stringify(data.extra || {})
+    JSON.stringify(data.extra || {}),
+    data.userName || ''
   ];
   db.run(insertSql, params, (err) => {
     if (err) console.error('❌ 写入失败:', err.message);
