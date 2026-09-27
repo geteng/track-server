@@ -75,6 +75,13 @@ const MOCK_ACCOUNTS = [
   { identifier: 'admin', password: 'admin123456', name: '开发者 · GTT', airuRole: 'teacher', partnerRole: 'admin' },
 ];
 
+/* ---------- 内置保留账号：任何模式（含 upstream）都在本地校验，不走 airU ----------
+   用于 airU 服务不可达 / 联调期间的应急登录与自测；身份为开发者（最高权限）。
+   不出现在 /api/auth/config 的演示账号列表里，避免对外暴露。 */
+const BUILTIN_ACCOUNTS = [
+  { identifier: 'admin', password: 'admin123', name: '开发者 · GTT', airuRole: 'teacher', partnerRole: 'admin', builtin: true },
+];
+
 /* ---------- 登录失败提示（对应文档错误码） ---------- */
 const ERROR_TEXT = {
   PARTNER_CLIENT_ID_REQUIRED: '缺少合作方标识',
@@ -241,17 +248,13 @@ function buildSession(ok) {
   };
 }
 
-/* ---------- 登录：本地演示账号 ---------- */
-function mockLogin(identifier, password, clientId) {
+/* ---------- 会话组装：内置 / 演示账号共用 ---------- */
+function localLogin(acc, clientId) {
   if (clientId && clientId !== CONFIG.clientId) return err(401, 'PARTNER_CLIENT_INVALID');
-  const acc = MOCK_ACCOUNTS.find((a) => a.identifier === identifier);
-  // 演示：非老师账号（student）返回 403，与文档一致
-  if (identifier === 'student') return err(403, 'PARTNER_TEACHER_REQUIRED');
-  if (!acc || acc.password !== password) return err(401, 'PARTNER_CREDENTIALS_INVALID');
   const mapped = PARTNER_ROLE_MAP[acc.partnerRole];
   return {
     ok: {
-      sub: `mock-${acc.identifier}`,
+      sub: `${acc.builtin ? 'builtin' : 'mock'}-${acc.identifier}`,
       name: acc.name,
       airuRole: acc.airuRole,
       partnerRole: acc.partnerRole,
@@ -260,6 +263,15 @@ function mockLogin(identifier, password, clientId) {
       permissions: mapped.permissions,
     },
   };
+}
+
+/* ---------- 登录：本地演示账号（仅 mock 模式） ---------- */
+function mockLogin(identifier, password, clientId) {
+  // 演示：非老师账号（student）返回 403，与文档一致
+  if (identifier === 'student') return err(403, 'PARTNER_TEACHER_REQUIRED');
+  const acc = MOCK_ACCOUNTS.find((a) => a.identifier === identifier);
+  if (!acc || acc.password !== password) return err(401, 'PARTNER_CREDENTIALS_INVALID');
+  return localLogin(acc, clientId);
 }
 
 /* ---------- 对外：登录 ---------- */
@@ -271,6 +283,13 @@ async function login({ identifier, password, clientId }, meta) {
   const cid = clientId || CONFIG.clientId;
   if (!cid) return err(400, 'PARTNER_CLIENT_ID_REQUIRED');
   if (rateLimited(meta && meta.ip)) return err(429, 'AUTH_RATE_LIMITED');
+
+  // 内置保留账号：任何模式都在本地校验，优先于 airU 上游，保证上游不可达时仍可登录
+  const builtin = BUILTIN_ACCOUNTS.find((a) => a.identifier === identifier && a.password === password);
+  if (builtin) {
+    clearAttempts(meta && meta.ip);
+    return localLogin(builtin, cid);
+  }
 
   // mock 模式：演示账号走本地校验，其他账号（airU 真实老师）转交 airU 校验。
   const isDemoAccount = MOCK_ACCOUNTS.some((a) => a.identifier === identifier) || identifier === 'student';
