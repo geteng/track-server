@@ -114,13 +114,6 @@ function applyRole() {
   const banner = $('roleBanner');
   if (banner) banner.innerHTML = `<span class="lv">当前视角：${meta.label}</span> 可见数据：<b>${meta.scope}</b> · ${meta.hint}`;
 
-  // 经营指标（仅开发者 / 老板娘可见）
-  const bizVisible = currentRole !== 'ca';
-  const convCard = $('statConversionCard');
-  if (convCard) convCard.style.display = bizVisible ? '' : 'none';
-  const statsRow = $('statsRow');
-  if (statsRow) statsRow.classList.toggle('cols-2', !bizVisible);
-
   // 开发者专属调试面板
   const levelSection = $('levelSection');
   if (levelSection) levelSection.style.display = currentRole === 'developer' ? '' : 'none';
@@ -264,7 +257,6 @@ const Overview = (() => {
       $('statFollowUp').textContent = summary.pendingFollowUps ?? followUps.filter((f) => f.status === 'pending').length;
       const pending = followUps.filter((f) => f.status === 'pending');
       $('statFollowUpDetail').innerHTML = pending.length ? `最近: <span>${esc(pending[0].display_name)}</span>` : '';
-      $('statConversion').innerHTML = '—';
 
       // 今日行动摘要
       const items = summaryRes.data.items || [];
