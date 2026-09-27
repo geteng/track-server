@@ -243,13 +243,36 @@ function formatTs(ts) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-// 回填历史数据的层级（旧库升级时使用）
+/**
+ * 对齐历史数据的层级（启动时执行一次，幂等）
+ * ① 回填 level 为空的行；
+ * ② 修正与 v0.3 权威层级表不一致的行 —— 否则 CA 端可见性会按旧值判断：
+ *    存成 L2 的浏览类事件会泄漏给 CA，存成 L0 的主动动作会让 CA 看不到。
+ */
 function backfillLevels() {
   db.all(`SELECT id, event FROM behavior_log WHERE level IS NULL OR level = ''`, [], (err, rows) => {
-    if (err || !rows || !rows.length) return;
-    const stmt = db.prepare(`UPDATE behavior_log SET level = ? WHERE id = ?`);
-    rows.forEach(r => stmt.run(dataLevels.levelOf(r.event), r.id));
-    stmt.finalize(() => console.log(`🔖 已回填 ${rows.length} 条历史上报的数据层级`));
+    if (!err && rows && rows.length) {
+      const stmt = db.prepare(`UPDATE behavior_log SET level = ? WHERE id = ?`);
+      rows.forEach((r) => stmt.run(dataLevels.levelOf(r.event), r.id));
+      stmt.finalize(() => console.log(`🔖 已回填 ${rows.length} 条缺失层级的历史数据`));
+    }
+
+    const map = dataLevels.EVENT_LEVEL;
+    const events = Object.keys(map);
+    if (!events.length) return;
+    let fixed = 0;
+    db.serialize(() => {
+      db.run('BEGIN');
+      const up = db.prepare(`UPDATE behavior_log SET level = ? WHERE event = ? AND level IS NOT ?`);
+      events.forEach((e) => {
+        up.run(map[e], e, map[e], function () { fixed += this.changes || 0; });
+      });
+      up.finalize(() => {
+        db.run('COMMIT', () => {
+          if (fixed) console.log(`🔖 已按 v0.3 层级表修正 ${fixed} 条历史数据的层级`);
+        });
+      });
+    });
   });
 }
 
