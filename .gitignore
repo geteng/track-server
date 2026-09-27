@@ -1,3 +1,11 @@
 node_modules/
 *.log
 npm-debug.log*
+
+# SQLite 数据库：本地运行产生的数据，不入库
+*.db
+*.db.bak
+*.db-journal
+*.db-wal
+*.db-shm
+track.db
