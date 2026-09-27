@@ -2,10 +2,16 @@ node_modules/
 *.log
 npm-debug.log*
 
-# SQLite 数据库：本地运行产生的数据，不入库
+# 数据库：线上库以服务器为准，绝不能被同步覆盖
+# 2026-09-27 事故复盘：track.db 曾被 Git 跟踪，rsync --exclude 写法失效后
+#                     被本地旧库反向覆盖服务器，靠进程 fd 抢救才拿回数据
+track.db
 *.db
 *.db.bak
 *.db-journal
 *.db-wal
 *.db-shm
-track.db
+*.sqlite
+*.sqlite3
+
+.DS_Store

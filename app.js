@@ -14,8 +14,82 @@ const PORT = 3000;
 
 /* ============ 中间件 ============ */
 app.use(cors());
-// type:'*/*' 确保 sendBeacon 传字符串(text/plain)也能解析
-app.use(express.json({ limit: '100kb', type: '*/*' }));
+/* ============ 上报体格式容错中间件 ============
+   背景：部分客户端（小程序 uploadFile / H5 FormData / 部分 SDK）会用
+   multipart/form-data 或 application/x-www-form-urlencoded 上报埋点，
+   而下面那行 json 中间件把 type 配成了通配符，会对所有 content-type 强行 JSON.parse，
+   遇到 "------WebKitFormBoundary..." 直接抛 SyntaxError 返回 400，
+   导致这部分埋点一条都进不了库（线上实测约占上报量的 1/5）。
+   做法：json 中间件之前先识别这两种格式并自行宽松解析，写回 req.body；
+        其余格式（application/json、text/plain 等）原样交给 express.json。 */
+function parseLooseFormBody(raw, contentType) {
+  const ctLower = String(contentType).toLowerCase(); // 类型判断用小写
+  // 1) x-www-form-urlencoded：a=1&b=2
+  if (ctLower.indexOf('application/x-www-form-urlencoded') === 0) {
+    const out = {};
+    new URLSearchParams(raw).forEach((v, k) => { out[k] = v; });
+    return out;
+  }
+  // 2) multipart/form-data：按 boundary 切段，取每段 name="xxx" 对应的值
+  const bm = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  if (bm) {
+    const boundary = '--' + (bm[1] || bm[2]).trim();
+    const out = {};
+    raw.split(boundary).forEach((part) => {
+      if (!part || part.replace(/[\r\n-]/g, '') === '') return;
+      const sep = part.indexOf('\r\n\r\n');
+      if (sep < 0) return;
+      const nm = /name="([^"]+)"/i.exec(part.slice(0, sep));
+      if (!nm) return;
+      out[nm[1]] = part.slice(sep + 4).replace(/\r\n$/, '').trim();
+    });
+    return out;
+  }
+  // 3) 兜底：既无 boundary 也不是标准格式，按 querystring 尽力解析
+  const out = {};
+  try {
+    new URLSearchParams(raw).forEach((v, k) => { out[k] = v; });
+  } catch (_) { /* 解析不了就返回空对象，交由路由判断缺字段 */ }
+  return out;
+}
+
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  const rawCt = String(req.headers['content-type'] || '');
+  const ct = rawCt.toLowerCase(); // boundary 大小写敏感，判断用小写、提取用原始值
+  if (ct.indexOf('multipart/form-data') !== 0 && ct.indexOf('application/x-www-form-urlencoded') !== 0) {
+    return next(); // 交给 express.json 处理
+  }
+  const chunks = [];
+  let size = 0;
+  let tooBig = false;
+  req.on('data', (chunk) => {
+    size += chunk.length;
+    if (size > 256 * 1024) { tooBig = true; chunks.length = 0; return; } // 超限后只丢弃不再缓存，避免撑大内存
+    chunks.push(chunk);
+  });
+  req.on('end', () => {
+    if (tooBig) return res.status(413).json({ code: -1, msg: '请求体过大（上限 256KB）' });
+    try {
+      req.body = parseLooseFormBody(Buffer.concat(chunks).toString('utf8'), rawCt);
+    } catch (e) {
+      console.warn('⚠️ 宽松解析上报体失败:', e.message);
+      req.body = {};
+    }
+    req.__looseParsed = true; // 告知下游 json 中间件：请求流已被消费，别再读一次
+    next();
+  });
+  req.on('error', next);
+});
+
+// type:'*/*' 确保 sendBeacon 传字符串(text/plain)也能解析。
+// 注意：正因为 type 是通配符，若不对已接手的请求放行，它会二次读取已被消费的流而报
+// "stream is not readable"，所以这里按 __looseParsed 标记决定是否跳过。
+const jsonParser = express.json({ limit: '100kb', type: '*/*' });
+app.use((req, res, next) => {
+  if (req.__looseParsed) return next();
+  return jsonParser(req, res, next);
+});
 
 // 请求日志
 app.use((req, res, next) => {
@@ -213,6 +287,10 @@ app.post('/api/track', (req, res) => {
   // 层级：优先使用上报方传入的 level，非法则按事件推导，保证「每个上报都有层级」
   const level = dataLevels.isValidLevel(data.level) ? data.level : dataLevels.levelOf(data.event);
 
+  // extra：宽松解析后的表单值已经是字符串，不必再 stringify 一次（否则会被额外包一层引号）
+  const extra = typeof data.extra === 'string' ? data.extra : JSON.stringify(data.extra || {});
+  // userName：兼容端上可能使用的几种命名（nickName 来自小程序 getUserProfile 的常见写法）
+  const userName = data.userName || data.username || data.nickName || data.nickname || '';
   const insertSql = `INSERT INTO behavior_log (aid, uid, event, url, referrer, timestamp, userAgent, screen, eventMsg, level, extra, userName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   const params = [
     data.aid || 'unknown',
@@ -225,12 +303,12 @@ app.post('/api/track', (req, res) => {
     data.screen || '',
     data.eventMsg || '',
     level,
-    JSON.stringify(data.extra || {}),
-    data.userName || ''
+    extra,
+    userName
   ];
   db.run(insertSql, params, (err) => {
     if (err) console.error('❌ 写入失败:', err.message);
-    else console.log(`📝 埋点: aid=${data.aid || 'unknown'} uid=${data.uid || '-'} event=${data.event} level=${level}`);
+    else console.log(`📝 埋点: aid=${data.aid || 'unknown'} uid=${data.uid || '-'} event=${data.event} level=${level}${userName ? ' user=' + userName : ''}`);
   });
   res.status(200).json({ code: 0, msg: 'ok', level });
 });
@@ -669,6 +747,22 @@ app.get('/sales/user', partnerAuth.requireLoginPage, (req, res) => {
 app.get('/customerChat', (req, res) => sendHtml(res, 'customerChat.html', '客户对话分析'));
 
 /* ============ 启动 ============ */
+/* ============ 兜底错误处理（务必注册在所有路由之后） ============
+   主要拦截 express.json 解析失败抛出的 SyntaxError。
+   以前这类异常会连带打印一整段堆栈刷屏、并让客户端拿到无结构的响应；
+   这里统一收敛成一行告警 + 结构化 JSON，便于统计「到底丢了多少上报」。 */
+app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.parse.failed') {
+    console.warn(`⚠️ 请求体解析失败 ${req.method} ${req.originalUrl} content-type=${req.headers['content-type'] || '-'} ${err.message}`);
+    return res.status(400).json({ code: -1, msg: '请求体无法解析，请使用 application/json 或表单格式' });
+  }
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ code: -1, msg: '请求体过大' });
+  }
+  console.error('❌ 未处理异常:', err && err.stack ? err.stack.split('\n').slice(0, 3).join(' | ') : err);
+  res.status(500).json({ code: -1, msg: '服务端异常' });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ 埋点服务运行在 http://0.0.0.0:${PORT}`);
   console.log(`   登录模式:     ${partnerAuth.CONFIG.enabled ? partnerAuth.CONFIG.mode + '（client_id=' + partnerAuth.CONFIG.clientId + '）' : '已关闭'}`);
